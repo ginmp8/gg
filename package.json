@@ -1,0 +1,41 @@
+{
+  "name": "gita",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "npm@11.16.0",
+  "engines": {
+    "node": ">=24"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "format": "prettier --write .",
+    "db:generate": "npm --workspace @gita/db run generate",
+    "db:migrate": "npm --workspace @gita/db run migrate",
+    "db:studio": "npm --workspace @gita/db run studio"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.28.0",
+    "@playwright/test": "^1.52.0",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^24.0.0",
+    "drizzle-kit": "^0.31.1",
+    "eslint": "^9.28.0",
+    "eslint-config-next": "^15.3.3",
+    "globals": "^16.2.0",
+    "prettier": "^3.5.3",
+    "tsx": "^4.19.4",
+    "turbo": "^2.5.4",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.33.1",
+    "vitest": "^3.2.2"
+  }
+}

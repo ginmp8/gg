@@ -1,0 +1,26 @@
+{
+  "name": "@gita/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.0.1",
+    "@gita/core": "0.1.0",
+    "@gita/db": "0.1.0",
+    "@gita/git-engine": "0.1.0",
+    "@gita/github-adapter": "0.1.0",
+    "fastify": "^5.3.3",
+    "zod": "^3.25.56"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.4",
+    "vitest": "^3.2.2"
+  }
+}

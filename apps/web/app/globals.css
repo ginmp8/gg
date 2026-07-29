@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: 210 24% 98%;
+  --foreground: 222 28% 12%;
+  --panel: 0 0% 100%;
+  --border: 214 18% 86%;
+  --muted: 210 20% 94%;
+  --muted-foreground: 216 12% 42%;
+  --accent: 204 82% 42%;
+  --accent-foreground: 0 0% 100%;
+  --success: 151 56% 34%;
+  --warning: 38 88% 45%;
+  --danger: 356 72% 48%;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-feature-settings: "tnum";
+}
+
+.chart-host {
+  height: 280px;
+  min-height: 260px;
+  width: 100%;
+}

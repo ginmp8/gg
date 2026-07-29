@@ -1,0 +1,400 @@
+import type { FastifyInstance } from "fastify";
+import { z } from "zod";
+
+import {
+  analyticsFiltersSchema,
+  branchViewInputSchema,
+  branchViewPatchSchema,
+  projectInputSchema,
+  projectPatchSchema,
+  repositoryInputSchema,
+  repositoryPatchSchema,
+  type ProviderState
+} from "@gita/core";
+import {
+  createBranchView,
+  createProject,
+  createRefreshRun,
+  createRepositoryRecord,
+  deleteBranchView,
+  deleteProject,
+  deleteRepository,
+  getBranchView,
+  getContributorFileTypes,
+  getFileTypeAnalytics,
+  getHotFiles,
+  getContributorLeaderboard,
+  getProject,
+  getProjectActivity,
+  getProjectSummary,
+  getRefreshRun,
+  getRepository,
+  getRepositoryActivity,
+  getRepositoryComparison,
+  getRepositoryContributors,
+  getRepositorySummary,
+  getRepositoryWithProviderDetails,
+  listBranchViews,
+  listBranches,
+  listProjects,
+  listPullRequests,
+  listRepositories,
+  updateBranchView,
+  updateProject,
+  updateRepositoryRecord,
+  type GitaDatabase
+} from "@gita/db";
+import { resolveRepositoryInput } from "@gita/git-engine";
+import { createGitHubAdapter } from "@gita/github-adapter";
+
+import { enqueueProjectRefresh, enqueueRepositoryRefresh } from "./refresh";
+
+const idParamsSchema = z.object({
+  projectId: z.string().min(1).optional(),
+  repoId: z.string().min(1).optional(),
+  runId: z.string().min(1).optional(),
+  branchViewId: z.string().min(1).optional()
+});
+
+export function registerRoutes(server: FastifyInstance, database: GitaDatabase): void {
+  server.get("/api/health", async () => ({
+    ok: true,
+    databasePath: database.paths.databasePath,
+    reposDir: database.paths.reposDir
+  }));
+
+  server.get("/api/projects", async () => ({
+    items: await listProjects(database)
+  }));
+
+  server.post("/api/projects", async (request, reply) => {
+    const input = projectInputSchema.parse(request.body);
+    const project = await createProject(database, input);
+    return reply.status(201).send(project);
+  });
+
+  server.get("/api/projects/:projectId", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    const project = await getProject(database, requireId(projectId));
+    if (!project) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+    return project;
+  });
+
+  server.patch("/api/projects/:projectId", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    const input = projectPatchSchema.parse(request.body);
+    const project = await updateProject(database, requireId(projectId), input);
+    if (!project) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+    return project;
+  });
+
+  server.delete("/api/projects/:projectId", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    const deleted = await deleteProject(database, requireId(projectId));
+    return deleted ? reply.status(204).send() : reply.status(404).send({ error: "not_found" });
+  });
+
+  server.get("/api/projects/:projectId/branch-views", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    const project = await getProject(database, requireId(projectId));
+    if (!project) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+    return { items: await listBranchViews(database, project.id) };
+  });
+
+  server.post("/api/projects/:projectId/branch-views", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    const project = await getProject(database, requireId(projectId));
+    if (!project) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+    const input = branchViewInputSchema.parse(request.body);
+    try {
+      const view = await createBranchView(database, project.id, input);
+      return reply.status(201).send(view);
+    } catch (error) {
+      if (isUniqueConstraintError(error)) {
+        return reply.status(409).send({
+          error: "conflict",
+          message: "A branch view with this name already exists."
+        });
+      }
+      throw error;
+    }
+  });
+
+  server.patch("/api/branch-views/:branchViewId", async (request, reply) => {
+    const { branchViewId } = idParamsSchema.parse(request.params);
+    const existing = await getBranchView(database, requireId(branchViewId));
+    if (!existing) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+    const input = branchViewPatchSchema.parse(request.body);
+    try {
+      const view = await updateBranchView(database, existing.id, input);
+      return view ?? reply.status(404).send({ error: "not_found" });
+    } catch (error) {
+      if (isUniqueConstraintError(error)) {
+        return reply.status(409).send({
+          error: "conflict",
+          message: "A branch view with this name already exists."
+        });
+      }
+      throw error;
+    }
+  });
+
+  server.delete("/api/branch-views/:branchViewId", async (request, reply) => {
+    const { branchViewId } = idParamsSchema.parse(request.params);
+    const deleted = await deleteBranchView(database, requireId(branchViewId));
+    return deleted ? reply.status(204).send() : reply.status(404).send({ error: "not_found" });
+  });
+
+  server.get("/api/projects/:projectId/repositories", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    const project = await getProject(database, requireId(projectId));
+    if (!project) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+    return { items: await listRepositories(database, project.id) };
+  });
+
+  server.post("/api/projects/:projectId/repositories", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    const project = await getProject(database, requireId(projectId));
+    if (!project) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+    const input = repositoryInputSchema.parse(request.body);
+    const resolved = resolveRepositoryInput(input.input, input.name);
+    const repository = await createRepositoryRecord(database, project.id, resolved);
+    return reply.status(201).send(repository);
+  });
+
+  server.get("/api/repositories/:repoId", async (request, reply) => {
+    const { repoId } = idParamsSchema.parse(request.params);
+    const repository = await getRepository(database, requireId(repoId));
+    if (!repository) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+    return repository;
+  });
+
+  server.patch("/api/repositories/:repoId", async (request, reply) => {
+    const { repoId } = idParamsSchema.parse(request.params);
+    const input = repositoryPatchSchema.parse(request.body);
+    const repository = await updateRepositoryRecord(database, requireId(repoId), input);
+    if (!repository) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+    return repository;
+  });
+
+  server.delete("/api/repositories/:repoId", async (request, reply) => {
+    const { repoId } = idParamsSchema.parse(request.params);
+    const deleted = await deleteRepository(database, requireId(repoId));
+    return deleted ? reply.status(204).send() : reply.status(404).send({ error: "not_found" });
+  });
+
+  server.post("/api/projects/:projectId/refresh", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    const project = await getProject(database, requireId(projectId));
+    if (!project) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+
+    const run = await createRefreshRun(database, {
+      projectId: project.id,
+      repositoryId: null,
+      scope: "project",
+      status: "queued"
+    });
+    enqueueProjectRefresh(database, run.id, project.id);
+    return reply.status(202).send(run);
+  });
+
+  server.post("/api/repositories/:repoId/refresh", async (request, reply) => {
+    const { repoId } = idParamsSchema.parse(request.params);
+    const repository = await getRepository(database, requireId(repoId));
+    if (!repository) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+
+    const run = await createRefreshRun(database, {
+      projectId: repository.projectId,
+      repositoryId: repository.id,
+      scope: "repository",
+      status: "queued"
+    });
+    enqueueRepositoryRefresh(database, run.id, repository.id);
+    return reply.status(202).send(run);
+  });
+
+  server.get("/api/refresh-runs/:runId", async (request, reply) => {
+    const { runId } = idParamsSchema.parse(request.params);
+    const run = await getRefreshRun(database, requireId(runId));
+    if (!run) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+    return run;
+  });
+
+  server.get("/api/projects/:projectId/summary", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    const filters = analyticsFiltersSchema.parse(request.query);
+    const project = await getProject(database, requireId(projectId));
+    if (!project) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+    const summary = await getProjectSummary(database, project.id, filters);
+    const repositories = await getRepositoryComparison(database, project.id, filters);
+    return { ...summary, repositoryComparison: repositories };
+  });
+
+  server.get("/api/projects/:projectId/activity", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    const filters = analyticsFiltersSchema.parse(request.query);
+    const project = await getProject(database, requireId(projectId));
+    if (!project) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+    return { items: await getProjectActivity(database, project.id, filters) };
+  });
+
+  server.get("/api/projects/:projectId/leaderboard", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    const filters = analyticsFiltersSchema.parse(request.query);
+    const project = await getProject(database, requireId(projectId));
+    if (!project) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+    return { items: await getContributorLeaderboard(database, project.id, filters) };
+  });
+
+  server.get("/api/projects/:projectId/file-types", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    const filters = analyticsFiltersSchema.parse(request.query);
+    const project = await getProject(database, requireId(projectId));
+    if (!project) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+    return { items: await getFileTypeAnalytics(database, project.id, filters) };
+  });
+
+  server.get("/api/projects/:projectId/hot-files", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    const filters = analyticsFiltersSchema.parse(request.query);
+    const project = await getProject(database, requireId(projectId));
+    if (!project) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+    return { items: await getHotFiles(database, project.id, filters) };
+  });
+
+  server.get("/api/projects/:projectId/contributor-file-types", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    const filters = analyticsFiltersSchema.parse(request.query);
+    const project = await getProject(database, requireId(projectId));
+    if (!project) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+    return { items: await getContributorFileTypes(database, project.id, filters) };
+  });
+
+  server.get("/api/repositories/:repoId/summary", async (request, reply) => {
+    const { repoId } = idParamsSchema.parse(request.params);
+    const filters = analyticsFiltersSchema.parse(request.query);
+    const summary = await getRepositorySummary(database, requireId(repoId), filters);
+    if (!summary) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+    return summary;
+  });
+
+  server.get("/api/repositories/:repoId/activity", async (request, reply) => {
+    const { repoId } = idParamsSchema.parse(request.params);
+    const filters = analyticsFiltersSchema.parse(request.query);
+    const repository = await getRepository(database, requireId(repoId));
+    if (!repository) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+    return { items: await getRepositoryActivity(database, repository.id, filters) };
+  });
+
+  server.get("/api/repositories/:repoId/contributors", async (request, reply) => {
+    const { repoId } = idParamsSchema.parse(request.params);
+    const filters = analyticsFiltersSchema.parse(request.query);
+    const repository = await getRepository(database, requireId(repoId));
+    if (!repository) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+    return { items: await getRepositoryContributors(database, repository.id, filters) };
+  });
+
+  server.get("/api/repositories/:repoId/branches", async (request, reply) => {
+    const { repoId } = idParamsSchema.parse(request.params);
+    const filters = analyticsFiltersSchema.parse(request.query);
+    const repository = await getRepository(database, requireId(repoId));
+    if (!repository) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+    return {
+      branchTimeSource: "headCommit",
+      items: await listBranches(database, repository.id, filters)
+    };
+  });
+
+  server.get("/api/repositories/:repoId/pull-requests", async (request, reply) => {
+    const { repoId } = idParamsSchema.parse(request.params);
+    const filters = analyticsFiltersSchema.parse(request.query);
+    const repository = await getRepositoryWithProviderDetails(database, requireId(repoId));
+    if (!repository) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+
+    const providerState = await resolveProviderState(
+      repository.provider,
+      repository.githubOwnerRepo
+    );
+    return {
+      providerState,
+      items: await listPullRequests(database, repository.id, filters)
+    };
+  });
+}
+
+async function resolveProviderState(
+  provider: string,
+  githubOwnerRepo: string | null
+): Promise<ProviderState> {
+  if (provider !== "github" || !githubOwnerRepo) {
+    return {
+      available: false,
+      reason: "unsupported_provider",
+      message: "Pull request metadata requires a GitHub repository."
+    };
+  }
+
+  return createGitHubAdapter().getStatus();
+}
+
+function requireId(value: string | undefined): string {
+  if (!value) {
+    throw new Error("Expected route id.");
+  }
+
+  return value;
+}
+
+function isUniqueConstraintError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    "code" in error &&
+    (error as { code?: string }).code === "SQLITE_CONSTRAINT_UNIQUE"
+  );
+}

@@ -1,0 +1,31 @@
+{
+  "name": "@gita/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch --preserveWatchOutput",
+    "test": "vitest run --passWithNoTests",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json",
+    "generate": "drizzle-kit generate",
+    "migrate": "tsx src/migrate.ts",
+    "studio": "drizzle-kit studio"
+  },
+  "dependencies": {
+    "@gita/core": "0.1.0",
+    "better-sqlite3": "^12.10.0",
+    "drizzle-orm": "^0.44.2",
+    "zod": "^3.25.56"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.1",
+    "tsx": "^4.19.4",
+    "vitest": "^3.2.2"
+  }
+}
