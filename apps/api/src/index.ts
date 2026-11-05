@@ -4,7 +4,10 @@ import { buildServer } from "./server";
 
 const database = openGitaDatabase();
 const server = await buildServer(database);
-const port = 4443;
+const port = Number(process.env.GITA_API_PORT ?? 4443);
+if (!Number.isInteger(port) || port < 1 || port > 65535) {
+  throw new Error("GITA_API_PORT must be a valid TCP port.");
+}
 
 try {
   await server.listen({ host: "127.0.0.1", port });

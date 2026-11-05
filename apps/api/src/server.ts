@@ -1,4 +1,5 @@
 import cors from "@fastify/cors";
+import { timingSafeEqual } from "node:crypto";
 import Fastify, { type FastifyInstance } from "fastify";
 import { ZodError } from "zod";
 
@@ -39,6 +40,9 @@ export async function buildServer(database: GitaDatabase): Promise<FastifyInstan
   const allowedOrigins = [
     "http://127.0.0.1:4444",
     "http://localhost:4444",
+    ...(process.env.GITA_DESKTOP_TOKEN
+      ? ["tauri://localhost", "http://tauri.localhost", "https://tauri.localhost"]
+      : []),
     ...configuredOrigins.map((origin) => {
       const parsed = new URL(origin);
       if (
@@ -57,6 +61,27 @@ export async function buildServer(database: GitaDatabase): Promise<FastifyInstan
     origin: allowedOrigins,
     methods: ["GET", "HEAD", "POST", "PATCH", "DELETE", "OPTIONS"]
   });
+
+  // In a packaged desktop build the backend is loopback-only, but still
+  // requires an unpredictable per-process token: CORS/Host are not auth.
+  const desktopToken = process.env.GITA_DESKTOP_TOKEN;
+  if (desktopToken) {
+    if (!/^[a-f0-9]{64}$/.test(desktopToken)) {
+      throw new Error("GITA_DESKTOP_TOKEN must be a 256-bit lowercase hex token.");
+    }
+    const expected = Buffer.from(`Bearer ${desktopToken}`);
+    server.addHook("onRequest", async (request, reply) => {
+      if (request.method === "OPTIONS") return;
+      const supplied = request.headers.authorization;
+      const provided = typeof supplied === "string" ? Buffer.from(supplied) : Buffer.alloc(0);
+      if (
+        provided.length !== expected.length ||
+        !timingSafeEqual(provided, expected)
+      ) {
+        return reply.status(401).send({ error: "unauthorized" });
+      }
+    });
+  }
 
   server.setErrorHandler((error, _request, reply) => {
     if (error instanceof ZodError) {

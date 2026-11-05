@@ -68,3 +68,28 @@ npm audit --omit=dev --audit-level=high
 
 CI failure must be fixed at the source, not bypassed by disabling
 checks, weakening assertions, or silently updating unrelated packages.
+
+## Tauri Desktop threat boundary
+
+The optional Tauri desktop has a separate security mode:
+- Rust owns the bundled Node.js sidecar, launches it on a random loopback
+  port and kills its process group when the desktop exits.
+- An OS-random, 256-bit session token is required on every non-preflight
+  API request. Rust injects the token only into the trusted webview's
+  document-start script, not a third-party website.
+- The webview has no shell plugin permissions. The API rejects untrusted
+  Host headers and CORS origins; neither replaces the bearer token.
+- SQLite and Git mirrors reside under the OS user application-data
+  directory, outside the packaged read-only application resources.
+- Next.js is statically exported; there is no public Next server.
+- Next.js static hydration requires inline scripts. Desktop CSP therefore
+  allows inline scripts for local packaged HTML. Review XSS risk before
+  displaying untrusted HTML or enabling external navigation.
+- The sidecar bundles Node.js and native better-sqlite3 binaries for each
+  target OS/architecture. Artifacts must be built on a matching native runner.
+- Git is currently a **system prerequisite** and is not included in the
+  installer. GitHub CLI is optional.
+- No updater, telemetry, automatic release, automatic install, npm publish,
+  public API listener or remote browser navigation is added.
+
+See [Desktop architecture](DESKTOP.md) for the trust boundaries.

@@ -131,4 +131,55 @@ describe("API server CORS", () => {
       await server.close();
     }
   });
+
+  it("requires a session token for desktop API requests", async () => {
+    const token = "a".repeat(64);
+    vi.stubEnv("GITA_DESKTOP_TOKEN", token);
+    const server = await buildServer(createTestDatabase());
+    try {
+      const unauthorized = await server.inject({ method: "GET", url: "/api/health" });
+      expect(unauthorized.statusCode).toBe(401);
+      const authorized = await server.inject({
+        method: "GET",
+        url: "/api/health",
+        headers: { authorization: `Bearer ${token}` }
+      });
+      expect(authorized.statusCode).toBe(200);
+      const denied = await server.inject({
+        method: "GET",
+        url: "/api/health",
+        headers: { authorization: "Bearer " + "b".repeat(64) }
+      });
+      expect(denied.statusCode).toBe(401);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("keeps desktop CORS limited to internal origins", async () => {
+    const token = "a".repeat(64);
+    vi.stubEnv("GITA_DESKTOP_TOKEN", token);
+    const server = await buildServer(createTestDatabase());
+    try {
+      const internal = await server.inject({
+        method: "OPTIONS",
+        url: "/api/projects",
+        headers: { origin: "http://tauri.localhost", "access-control-request-method": "POST" }
+      });
+      expect(internal.headers["access-control-allow-origin"]).toBe("http://tauri.localhost");
+      const hostile = await server.inject({
+        method: "OPTIONS",
+        url: "/api/projects",
+        headers: { origin: "https://untrusted.example", "access-control-request-method": "POST" }
+      });
+      expect(hostile.headers["access-control-allow-origin"]).toBeUndefined();
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("rejects malformed desktop tokens rather than disabling authentication", async () => {
+    vi.stubEnv("GITA_DESKTOP_TOKEN", "short");
+    await expect(buildServer(createTestDatabase())).rejects.toThrow(/256-bit/);
+  });
 });

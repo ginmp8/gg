@@ -20,7 +20,9 @@
     "format": "prettier --write .",
     "db:generate": "npm --workspace @gita/db run generate",
     "db:migrate": "npm --workspace @gita/db run migrate",
-    "db:studio": "npm --workspace @gita/db run studio"
+    "db:studio": "npm --workspace @gita/db run studio",
+    "desktop:prepare": "node scripts/desktop/prepare.mjs",
+    "desktop:check": "node --test scripts/desktop/*.test.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",
@@ -36,6 +38,7 @@
     "turbo": "^2.5.4",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.33.1",
-    "vitest": "^3.2.2"
+    "vitest": "^3.2.2",
+    "esbuild": "0.25.12"
   }
 }

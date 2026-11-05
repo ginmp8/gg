@@ -19,6 +19,21 @@ import type {
 
 const API_URL = process.env.NEXT_PUBLIC_GITA_API_URL ?? "http://127.0.0.1:4443";
 
+// Injected at document start by the trusted native Tauri window only.
+// The normal browser/self-hosted workflow does not receive a session token.
+declare global {
+  interface Window {
+    __GITA_DESKTOP__?: Readonly<{ apiBase: string; token: string }>;
+  }
+}
+
+function backendConnection(): { apiBase: string; token?: string } {
+  if (typeof window !== "undefined" && window.__GITA_DESKTOP__) {
+    return window.__GITA_DESKTOP__;
+  }
+  return { apiBase: API_URL };
+}
+
 export interface ProjectSummaryResponse extends ProjectSummary {
   repositoryComparison: RepositoryComparisonRow[];
 }
@@ -222,7 +237,12 @@ async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
     headers.set("content-type", "application/json");
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
+  const backend = backendConnection();
+  if (backend.token) {
+    headers.set("authorization", `Bearer ${backend.token}`);
+  }
+
+  const response = await fetch(`${backend.apiBase}${path}`, {
     ...init,
     headers
   });

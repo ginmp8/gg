@@ -150,6 +150,19 @@ the current size or absolute ownership of the codebase. Merge commits remain in
 commit counts but are excluded from contributor line-change totals. Binary
 files do not contribute line counts.
 
+## Desktop application (Tauri 2)
+
+The optional native desktop distribution bundles the existing React dashboard,
+Fastify backend, Node.js 24 and native SQLite binding. **Node.js is not
+required on the end user's machine**, but **Git must be available** to analyze
+repositories; the `gh` CLI remains optional.
+
+- [Desktop development, build, architecture and security](docs/DESKTOP.md)
+- [Desktop CI artifacts and manual GitHub Releases](docs/RELEASING-DESKTOP.md)
+
+The browser-based `npm run dev` workflow remains unchanged. Building the
+desktop does not migrate SQLite or change the original analytics engine.
+
 ## Security and self-hosting
 
 Gita is **local-first**. The API binds to `127.0.0.1:4443` by default and has
