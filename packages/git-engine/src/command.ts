@@ -48,8 +48,13 @@ export async function runProcess(
   const safeArgs = args.map(redactSecrets);
 
   return new Promise<GitCommandResult>((resolve, reject) => {
+    // The desktop session token authenticates only the API and must never
+    // flow into Git, GitHub CLI, credential helpers or subprocesses.
+    const childEnv = { ...process.env };
+    delete childEnv.GITA_DESKTOP_TOKEN;
     const child = spawn(command, args, {
       cwd: options.cwd,
+      env: childEnv,
       shell: false,
       stdio: ["ignore", "pipe", "pipe"]
     });
