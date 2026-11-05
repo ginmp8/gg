@@ -101,7 +101,8 @@ migrate databases.
 The Vitest suite verifies:
 1. Remote clone/fetch is rejected before writing a new mirror when offline.
 2. Git cannot establish a connection even to a local dummy HTTP server
-   unless remote Git is explicitly enabled. No external test service is used.
+   while remote Git is disabled. The opt-in gate is checked separately;
+   no external test service is used.
 3. The GitHub CLI is never invoked while disabled; explicit metadata
    opt-in restores existing behavior.
 4. `GITA_OFFLINE=1` overrides both opt-ins.

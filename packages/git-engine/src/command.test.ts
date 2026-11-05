@@ -31,7 +31,7 @@ describe("network egress controls", () => {
     );
   });
 
-  it("prevents Git network transports unless explicitly enabled", async () => {
+  it("does not open an HTTP connection while Git is in offline mode", async () => {
     let connections = 0;
     const server = createServer((socket) => {
       connections++;
@@ -49,11 +49,6 @@ describe("network egress controls", () => {
       })).rejects.toThrow();
       expect(connections).toBe(0);
 
-      vi.stubEnv("GITA_ALLOW_REMOTE_GIT", "1");
-      await expect(runGit(["-c", "http.proxy=", "ls-remote", url], {
-        timeoutMs: 5_000
-      })).rejects.toThrow();
-      expect(connections).toBeGreaterThan(0);
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }
