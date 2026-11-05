@@ -38,7 +38,7 @@ for every job except the explicitly gated release job.
    and production-dependency audit.
 2. Platform-native `npm ci`, static export, Node sidecar preparation,
    full Fastify/SQLite startup smoke test, and Tauri packaging.
-3. Archive all final bundle files as GitHub Actions artifacts.
+3. Archive all final bundle files as GitHub Actions artifacts. Installer\n   jobs run independently of the verification job; **release publication still\n   requires both verification and packaging to pass**.
 4. Before releasing publicly, test GUI navigation, importing local and
    remote repositories, offline behavior, data persistence, and the
    installation/uninstallation workflow on each target OS.
@@ -48,7 +48,7 @@ Known gap: the new Rust package has no committed `Cargo.lock` yet; the
 first native Cargo build will generate it. Review and commit that lockfile
 before a production-grade release to freeze transitive dependencies.
 
-## Recovery
+The GitHub Actions dependency audit currently reports inherited high-severity\nvulnerabilities; do not publish while the verification job is red.\n\nGitHub only enables manual workflow dispatch after the workflow file is\navailable on the repository default branch. Tag push builds remain available\nfrom the tagged commit's workflow file.\n\n## Recovery
 
 A failed or cancelled build must not advance any branch, move tags or
 publish a Release. Review the failed job's logs, fix only the relevant

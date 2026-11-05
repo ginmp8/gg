@@ -93,3 +93,21 @@ The optional Tauri desktop has a separate security mode:
   public API listener or remote browser navigation is added.
 
 See [Desktop architecture](DESKTOP.md) for the trust boundaries.
+
+## Known supply-chain blockers observed on CI (2026-11-05)
+
+The original Gita lockfile already fails `npm audit --omit=dev
+--audit-level=high`: the CI audit reported **9 high and 2 moderate
+findings**. Important high-severity candidates include `drizzle-orm`,
+`fast-uri`, `fastify`, `find-my-way`, `nanoid`, `postcss`, `sharp`,
+`source-map-js` and `zod`. Applicability of each advisory to Gita's
+specific call sites has not been independently proven.
+
+Some upstream remediations require breaking dependency upgrades, especially
+Drizzle ORM and Zod. The Next.js 15 dependency tree also pins a PostCSS
+version with an advisory. Do not override these libraries without a separate
+compatibility-tested migration. The existing audit gate is NOT relaxed:
+unresolved findings block the verification job and therefore **prevent
+GitHub Release publication**. Installer packaging may still run to expose
+separate desktop integration failures. A green desktop build alone is not
+a green security audit.

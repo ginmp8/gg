@@ -44,7 +44,12 @@ export async function buildServer(database: GitaDatabase): Promise<FastifyInstan
       ? ["tauri://localhost", "http://tauri.localhost", "https://tauri.localhost"]
       : []),
     ...configuredOrigins.map((origin) => {
-      const parsed = new URL(origin);
+      let parsed: URL;
+      try {
+        parsed = new URL(origin);
+      } catch {
+        throw new Error("GITA_ALLOWED_WEB_ORIGINS must contain exact HTTP(S) origins.");
+      }
       if (
         !["http:", "https:"].includes(parsed.protocol) ||
         parsed.origin !== origin ||

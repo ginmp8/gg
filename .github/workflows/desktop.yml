@@ -40,8 +40,9 @@ jobs:
       - run: npm audit --omit=dev --audit-level=high
 
   package:
+    # Packaging runs even when dependency audits fail so we can diagnose the
+    # installer independently. Publishing still requires BOTH jobs to succeed.
     name: Build ${{ matrix.target }}
-    needs: verify
     runs-on: ${{ matrix.os }}
     timeout-minutes: 100
     strategy:
