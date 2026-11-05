@@ -94,4 +94,41 @@ describe("API server CORS", () => {
     vi.stubEnv("GITA_ALLOWED_WEB_ORIGINS", "*");
     await expect(buildServer(createTestDatabase())).rejects.toThrow(/exact HTTP\(S\) origins/);
   });
+
+  it("rejects an unexpected Host header even without an Origin header", async () => {
+    const server = await buildServer(createTestDatabase());
+    try {
+      const blocked = await server.inject({
+        method: "GET",
+        url: "/api/health",
+        headers: { host: "unexpected.example.test" }
+      });
+      expect(blocked.statusCode).toBe(403);
+      expect(blocked.json()).toMatchObject({ error: "invalid_host" });
+
+      const local = await server.inject({
+        method: "GET",
+        url: "/api/health",
+        headers: { host: "localhost:4443" }
+      });
+      expect(local.statusCode).toBe(200);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("allows an explicitly trusted API hostname", async () => {
+    vi.stubEnv("GITA_ALLOWED_API_HOSTS", "gita.example.test");
+    const server = await buildServer(createTestDatabase());
+    try {
+      const response = await server.inject({
+        method: "GET",
+        url: "/api/health",
+        headers: { host: "gita.example.test" }
+      });
+      expect(response.statusCode).toBe(200);
+    } finally {
+      await server.close();
+    }
+  });
 });

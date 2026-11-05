@@ -13,6 +13,23 @@ export async function buildServer(database: GitaDatabase): Promise<FastifyInstan
     }
   });
 
+  // A loopback-only unauthenticated API must also reject hostile Host headers:
+  // browser same-origin policy does not protect against DNS rebinding.
+  const additionalHosts = (process.env.GITA_ALLOWED_API_HOSTS ?? "")
+    .split(",")
+    .map((host) => host.trim().toLowerCase())
+    .filter(Boolean);
+  if (additionalHosts.some((host) => !/^[a-z0-9.-]+$/.test(host))) {
+    throw new Error("GITA_ALLOWED_API_HOSTS must contain exact hostnames.");
+  }
+  const allowedHosts = new Set(["localhost", "127.0.0.1", "[::1]", ...additionalHosts]);
+  server.addHook("onRequest", async (request, reply) => {
+    const host = request.headers.host?.toLowerCase().replace(/:\d+$/, "");
+    if (host && !allowedHosts.has(host)) {
+      return reply.status(403).send({ error: "invalid_host" });
+    }
+  });
+
   // Only the two actual Gita dashboard origins are trusted implicitly.
   // Explicitly configured extra origins are not a substitute for authentication.
   const configuredOrigins = (process.env.GITA_ALLOWED_WEB_ORIGINS ?? "")

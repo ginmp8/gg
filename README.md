@@ -157,6 +157,11 @@ Gita is **local-first**. The API binds to `127.0.0.1:4443` by default and has
 through an unauthenticated reverse proxy. Shared installations require an
 authentication and TLS boundary.
 
+HTTP `Host` validation also limits access to loopback hostnames by default,
+reducing DNS rebinding exposure. Explicit reverse-proxy hostnames can be
+added with `GITA_ALLOWED_API_HOSTS` (comma-separated). This is not
+authentication and does not itself enable network listening.
+
 Browser CORS access is restricted to `http://127.0.0.1:4444` and
 `http://localhost:4444`. Operators may add extra *exact* origins through
 `GITA_ALLOWED_WEB_ORIGINS` (comma-separated). CORS is **not** authorization.

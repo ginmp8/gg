@@ -23,16 +23,19 @@
 2. **CORS** — Trust only the local web application's default origins.
    `GITA_ALLOWED_WEB_ORIGINS` is a comma-separated opt-in for additional
    exact HTTP(S) origins; wildcard entries are rejected.
-3. **Git credentials** — Reject HTTPS URLs with userinfo or common token
+3. **HTTP Host validation** — Reject requests bearing unexpected Host
+   headers by default, reducing DNS rebinding exposure. Operators can opt
+   in to exact proxy hostnames with `GITA_ALLOWED_API_HOSTS`.
+4. **Git credentials** — Reject HTTPS URLs with userinfo or common token
    query fields by default, preventing accidental cleartext persistence.
    `GITA_ALLOW_URL_CREDENTIALS=1` explicitly restores the original
    behavior; this is unsafe for shared installations.
-4. **Diagnostic redaction** — Redact credentials in subprocess argument
+5. **Diagnostic redaction** — Redact credentials in subprocess argument
    diagnostics and unsuccessful stdout/stderr, without altering Git output
    on successful analysis.
-5. **Secret-hygiene ignores** — Exclude `.env.*` files by default while
+6. **Secret-hygiene ignores** — Exclude `.env.*` files by default while
    allowing explicitly named example files.
-6. **Dependency audit gate** — Add `npm audit --omit=dev --audit-level=high`
+7. **Dependency audit gate** — Add `npm audit --omit=dev --audit-level=high`
    to GitHub Actions CI alongside existing lint, typecheck and tests.
 
 ## Deployment limits and residual risks
