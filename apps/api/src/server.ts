@@ -40,7 +40,12 @@ export async function buildServer(database: GitaDatabase): Promise<FastifyInstan
     "http://127.0.0.1:4444",
     "http://localhost:4444",
     ...configuredOrigins.map((origin) => {
-      const parsed = new URL(origin);
+      let parsed: URL;
+      try {
+        parsed = new URL(origin);
+      } catch {
+        throw new Error("GITA_ALLOWED_WEB_ORIGINS must contain exact HTTP(S) origins.");
+      }
       if (
         !["http:", "https:"].includes(parsed.protocol) ||
         parsed.origin !== origin ||
