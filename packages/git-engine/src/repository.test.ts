@@ -43,6 +43,24 @@ describe("repository analysis", () => {
     }
   });
 
+  it("rejects an existing mirror whose origin was changed to an HTTP remote", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gita-cache-egress-"));
+    try {
+      const sourcePath = path.join(tmpDir, "source.git");
+      const cachePath = path.join(tmpDir, "mirror.git");
+      git(["init", "--bare", sourcePath]);
+      await ensureMirrorRepository({ fetchUrl: sourcePath, cachePath, reposRoot: tmpDir });
+      git(["-C", cachePath, "remote", "set-url", "origin", "http://127.0.0.1:9/dummy.git"]);
+      await expect(ensureMirrorRepository({
+        fetchUrl: sourcePath, cachePath, reposRoot: tmpDir
+      })).rejects.toMatchObject({
+        result: { stderr: expect.stringMatching(/transport 'http' not allowed/i) }
+      });
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   it("analyzes commits from all branches while keeping file inventory on the analysis branch", async () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gita-git-engine-"));
     try {

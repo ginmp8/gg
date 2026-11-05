@@ -31,11 +31,11 @@ describe("network egress controls", () => {
     );
   });
 
-  it("prevents Git network transport, including for existing mirror fetches", async () => {
+  it("prevents Git network transports unless explicitly enabled", async () => {
     let connections = 0;
     const server = createServer((socket) => {
       connections++;
-      socket.end("HTTP/1.1 403 Forbidden\\r\\nContent-Length: 0\\r\\n\\r\\n");
+      socket.end("HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\n\r\n");
     });
     await new Promise<void>((resolve, reject) =>
       server.listen(0, "127.0.0.1", resolve).once("error", reject)
