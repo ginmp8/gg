@@ -38,16 +38,18 @@ jobs:
           npm install --workspace @gita/db --save-exact drizzle-orm@0.45.4 zod@4.6.7 --ignore-scripts
           npm install --workspace @gita/core --save-exact zod@4.6.7 --ignore-scripts
           npm install --workspace @gita/web --save-exact echarts@6.1.0 --ignore-scripts
+          npm install --workspace @gita/web --save-dev --save-exact postcss@8.5.32 --ignore-scripts
           node - <<'NODE'
           const fs = require('node:fs');
           const path = 'package.json';
           const pkg = JSON.parse(fs.readFileSync(path, 'utf8'));
+          // The nested Next.js 15 copy is otherwise pinned below the
+          // patched PostCSS version; scoped overrides alone did not update it.
+          // Direct workspace Zod packages are already pinned to 4.6.7.
           pkg.overrides = {
             ...pkg.overrides,
-            next: {
-              ...pkg.overrides?.next,
-              postcss: '^8.5.23'
-            }
+            postcss: '8.5.32',
+            zod: '4.6.7'
           };
           fs.writeFileSync(path, JSON.stringify(pkg, null, 2) + '\n');
           NODE
@@ -55,6 +57,8 @@ jobs:
           # Remediate compatible transitive packages. Final audit below is
           # authoritative; this command's status is not a release decision.
           npm audit fix --omit=dev --ignore-scripts || true
+          npm ls postcss zod --all || true
+          node -e "const p=require('./package-lock.json').packages;for(const [k,v] of Object.entries(p)){if(k.endsWith('/postcss')||k.endsWith('/zod'))console.log(k, v.version)}"
       - name: Install exact candidate lockfile
         run: npm ci
       - name: Run unchanged validation gates
