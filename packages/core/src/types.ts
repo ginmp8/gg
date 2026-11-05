@@ -279,7 +279,7 @@ export interface ProjectSummary {
 
 export interface ProviderDegradedState {
   available: false;
-  reason: "missing_gh" | "unauthenticated" | "rate_limited" | "unsupported_provider" | "unknown";
+  reason: "network_disabled" | "missing_gh" | "unauthenticated" | "rate_limited" | "unsupported_provider" | "unknown";
   message: string;
 }
 

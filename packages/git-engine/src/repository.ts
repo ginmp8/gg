@@ -13,6 +13,7 @@ import type {
 import { applyLineCounts, parseGrepLineCounts, parseLsTreeFiles } from "./files";
 import { parseGitLog } from "./parser";
 import { GitCommandError, runGit } from "./command";
+import { isRemoteGitAllowed } from "./network-policy";
 
 export interface ResolvedRepositoryInput {
   originalInput: string;
@@ -117,6 +118,12 @@ export async function ensureMirrorRepository(params: {
   reposRoot: string;
 }): Promise<{ gitFetchMs: number; operation: "clone" | "fetch" }> {
   assertAppOwnedCachePath(params.cachePath, params.reposRoot);
+  // Local repositories remain usable offline. A remote source requires an
+  // explicit opt-in, including when it was already cached in a Git mirror.
+  // runGit independently restricts Git protocols while offline.
+  if (!path.isAbsolute(params.fetchUrl) && !isRemoteGitAllowed()) {
+    throw new Error("Remote Git access is disabled. Set GITA_ALLOW_REMOTE_GIT=1 to enable it.");
+  }
   fs.mkdirSync(path.dirname(params.cachePath), { recursive: true });
 
   if (fs.existsSync(params.cachePath)) {

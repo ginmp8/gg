@@ -1,6 +1,73 @@
-import { describe, expect, it } from "vitest";
+import { createServer } from "node:net";
+import type { AddressInfo } from "node:net";
 
-import { redactSecrets } from "./command";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+import { redactSecrets, runGit, runProcess } from "./command";
+import { isRemoteGitAllowed, isGitHubMetadataAllowed } from "./network-policy";
+
+afterEach(() => vi.unstubAllEnvs());
+
+describe("network egress controls", () => {
+  it("requires exact opt-in and honors an offline override", () => {
+    expect(isRemoteGitAllowed()).toBe(false);
+    expect(isGitHubMetadataAllowed()).toBe(false);
+    vi.stubEnv("GITA_ALLOW_REMOTE_GIT", "true");
+    vi.stubEnv("GITA_ALLOW_GITHUB_METADATA", "yes");
+    expect(isRemoteGitAllowed()).toBe(false);
+    expect(isGitHubMetadataAllowed()).toBe(false);
+    vi.stubEnv("GITA_ALLOW_REMOTE_GIT", "1");
+    vi.stubEnv("GITA_ALLOW_GITHUB_METADATA", "1");
+    expect(isRemoteGitAllowed()).toBe(true);
+    expect(isGitHubMetadataAllowed()).toBe(true);
+    vi.stubEnv("GITA_OFFLINE", "1");
+    expect(isRemoteGitAllowed()).toBe(false);
+    expect(isGitHubMetadataAllowed()).toBe(false);
+  });
+
+  it("does not start GitHub CLI without consent", async () => {
+    await expect(runProcess("gh", ["auth", "status"])).rejects.toThrow(
+      /GITA_ALLOW_GITHUB_METADATA=1/
+    );
+  });
+
+  it("prevents Git network transport, including for existing mirror fetches", async () => {
+    let connections = 0;
+    const server = createServer((socket) => {
+      connections++;
+      socket.end("HTTP/1.1 403 Forbidden\\r\\nContent-Length: 0\\r\\n\\r\\n");
+    });
+    await new Promise<void>((resolve, reject) =>
+      server.listen(0, "127.0.0.1", resolve).once("error", reject)
+    );
+    try {
+      const address = server.address() as AddressInfo;
+      // Only a local, dummy HTTP endpoint is involved in this proof.
+      const url = `http://127.0.0.1:${address.port}/dummy.git`;
+      await expect(runGit(["-c", "http.proxy=", "ls-remote", url], {
+        timeoutMs: 5_000
+      })).rejects.toThrow();
+      expect(connections).toBe(0);
+
+      vi.stubEnv("GITA_ALLOW_REMOTE_GIT", "1");
+      await expect(runGit(["-c", "http.proxy=", "ls-remote", url], {
+        timeoutMs: 5_000
+      })).rejects.toThrow();
+      expect(connections).toBeGreaterThan(0);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
+  it("never forwards a future desktop API token to a child process", async () => {
+    vi.stubEnv("GITA_DESKTOP_TOKEN", "a".repeat(64));
+    const result = await runProcess(process.execPath, [
+      "-e",
+      "process.stdout.write(process.env.GITA_DESKTOP_TOKEN ?? 'not-inherited')"
+    ]);
+    expect(result.stdout).toBe("not-inherited");
+  });
+});
 
 describe("Git diagnostic redaction", () => {
   it("masks credentials inside HTTPS repository URLs", () => {

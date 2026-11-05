@@ -104,7 +104,9 @@ gh auth status
 ```
 
 Core Git analytics continue to work when `gh` is missing, unauthenticated, or
-temporarily unavailable.
+temporarily unavailable. GitHub metadata and remote Git access are also
+disabled by default; see [Network and privacy](docs/NETWORK-PRIVACY.md)
+for explicit opt-in settings.
 
 ## How it works
 
@@ -149,6 +151,36 @@ Line metrics come from Git `--numstat`: they describe historical change, not
 the current size or absolute ownership of the codebase. Merge commits remain in
 commit counts but are excluded from contributor line-change totals. Binary
 files do not contribute line counts.
+
+## Network and privacy
+
+**Gita runs offline by default.** Local repository analysis and the local
+dashboard still work. Remote Git clone/fetch and GitHub CLI queries require
+separate, explicit opt-in settings, while `GITA_OFFLINE=1` overrides both.
+Next.js CLI telemetry is disabled when launched through the project's npm
+scripts.
+
+For Linux/macOS:
+
+```bash
+GITA_ALLOW_REMOTE_GIT=1 GITA_ALLOW_GITHUB_METADATA=1 npm run dev
+```
+
+For Windows PowerShell:
+
+```powershell
+$env:GITA_ALLOW_REMOTE_GIT = "1"
+$env:GITA_ALLOW_GITHUB_METADATA = "1"
+npm run dev
+```
+
+Enable only the capability you need. Enabling remote Git authorizes the
+configured Git server to receive Git requests; enabling GitHub metadata
+authorizes `gh` to query GitHub. The local API never needs public Internet
+exposure for normal use.
+
+See [Network and privacy](docs/NETWORK-PRIVACY.md) for exact behavior,
+offline enforcement, limitations and how to inspect real process traffic.
 
 ## Security and self-hosting
 
