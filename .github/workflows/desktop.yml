@@ -21,7 +21,9 @@ env:
 
 concurrency:
   group: gita-desktop-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  # Only PR updates cancel obsolete desktop builds. Tags and explicitly
+  # approved release jobs are never cancelled by newer commits.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   verify:
