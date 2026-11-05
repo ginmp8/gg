@@ -58,6 +58,21 @@ export function resolveRepositoryInput(
   }
 
   if (HTTPS_URL.test(trimmed) || SSH_URL.test(trimmed)) {
+    if (HTTPS_URL.test(trimmed) && process.env.GITA_ALLOW_URL_CREDENTIALS !== "1") {
+      const remoteUrl = new URL(trimmed);
+      const credentialQueryKeys = new Set([
+        "token", "access_token", "auth", "authorization", "password",
+        "private_token", "client_secret", "api_key"
+      ]);
+      const hasCredentialQuery = Array.from(remoteUrl.searchParams.keys())
+        .some((key) => credentialQueryKeys.has(key.toLowerCase()));
+      if (remoteUrl.username || remoteUrl.password || hasCredentialQuery) {
+        throw new Error(
+          "Repository URL contains embedded credentials. Use a Git credential helper, " +
+          "or explicitly opt in with GITA_ALLOW_URL_CREDENTIALS=1."
+        );
+      }
+    }
     const githubOwnerRepo = parseGitHubOwnerRepo(trimmed);
     return {
       originalInput: trimmed,

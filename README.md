@@ -150,6 +150,26 @@ the current size or absolute ownership of the codebase. Merge commits remain in
 commit counts but are excluded from contributor line-change totals. Binary
 files do not contribute line counts.
 
+## Security and self-hosting
+
+Gita is **local-first**. The API binds to `127.0.0.1:4443` by default and has
+**no user authentication**. Do not publish the API directly or expose it
+through an unauthenticated reverse proxy. Shared installations require an
+authentication and TLS boundary.
+
+Browser CORS access is restricted to `http://127.0.0.1:4444` and
+`http://localhost:4444`. Operators may add extra *exact* origins through
+`GITA_ALLOWED_WEB_ORIGINS` (comma-separated). CORS is **not** authorization.
+
+HTTPS Git URLs containing userinfo or common token query parameters are
+rejected by default to avoid plaintext credential storage in SQLite and Git
+mirror configuration. Prefer a Git credential helper. To explicitly retain
+the original behavior, set `GITA_ALLOW_URL_CREDENTIALS=1`, accepting the
+credential-storage risk.
+
+See [Security hardening](docs/SECURITY-HARDENING.md) for the verified
+source scope, dependency updates, controls and remaining risks.
+
 ## License
 
 Gita is available under the [MIT License](LICENSE). You may use, copy, fork,

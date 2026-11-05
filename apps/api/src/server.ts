@@ -13,8 +13,31 @@ export async function buildServer(database: GitaDatabase): Promise<FastifyInstan
     }
   });
 
+  // Only the two actual Gita dashboard origins are trusted implicitly.
+  // Explicitly configured extra origins are not a substitute for authentication.
+  const configuredOrigins = (process.env.GITA_ALLOWED_WEB_ORIGINS ?? "")
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  const allowedOrigins = [
+    "http://127.0.0.1:4444",
+    "http://localhost:4444",
+    ...configuredOrigins.map((origin) => {
+      const parsed = new URL(origin);
+      if (
+        !["http:", "https:"].includes(parsed.protocol) ||
+        parsed.origin !== origin ||
+        parsed.username ||
+        parsed.password
+      ) {
+        throw new Error("GITA_ALLOWED_WEB_ORIGINS must contain exact HTTP(S) origins.");
+      }
+      return origin;
+    })
+  ];
+
   await server.register(cors, {
-    origin: [/^http:\/\/127\.0\.0\.1:\d+$/, /^http:\/\/localhost:\d+$/],
+    origin: allowedOrigins,
     methods: ["GET", "HEAD", "POST", "PATCH", "DELETE", "OPTIONS"]
   });
 

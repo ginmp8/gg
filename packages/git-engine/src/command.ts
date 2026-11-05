@@ -29,8 +29,9 @@ const DEFAULT_TIMEOUT_MS = 120_000;
 
 export function redactSecrets(value: string): string {
   return value
-    .replace(/(https?:\/\/)([^/@:\s]+):([^/@\s]+)@/gi, "$1$2:***@")
-    .replace(/(gh[pousr]_[A-Za-z0-9_]+)/g, "***");
+    .replace(/(https?:\/\/)[^\s/?#]*@/gi, "$1***@")
+    .replace(/([?&](?:token|access_token|auth|authorization|password|private_token|client_secret|api_key)=)[^&#\s]*/gi, "$1***")
+    .replace(/\b(?:gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+|glpat-[A-Za-z0-9_-]+)\b/g, "***");
 }
 
 export async function runGit(args: string[], options: GitCommandOptions = {}): Promise<GitCommandResult> {
@@ -44,6 +45,7 @@ export async function runProcess(
 ): Promise<GitCommandResult> {
   const started = performance.now();
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const safeArgs = args.map(redactSecrets);
 
   return new Promise<GitCommandResult>((resolve, reject) => {
     const child = spawn(command, args, {
@@ -74,7 +76,7 @@ export async function runProcess(
       clearTimeout(timeout);
       const result: GitCommandResult = {
         command,
-        args,
+        args: safeArgs,
         stdout: redactSecrets(stdout),
         stderr: redactSecrets(error.message),
         exitCode: null,
@@ -88,8 +90,8 @@ export async function runProcess(
       clearTimeout(timeout);
       const result: GitCommandResult = {
         command,
-        args,
-        stdout,
+        args: safeArgs,
+        stdout: exitCode === 0 && !timedOut ? stdout : redactSecrets(stdout),
         stderr: redactSecrets(stderr),
         exitCode,
         durationMs: Math.round(performance.now() - started),

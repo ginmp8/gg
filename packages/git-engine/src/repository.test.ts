@@ -5,9 +5,28 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { analyzeRepository, ensureMirrorRepository } from "./repository";
+import { analyzeRepository, ensureMirrorRepository, resolveRepositoryInput } from "./repository";
 
 describe("repository analysis", () => {
+  it("rejects embedded HTTPS credentials unless deliberately enabled", () => {
+    const previous = process.env.GITA_ALLOW_URL_CREDENTIALS;
+    delete process.env.GITA_ALLOW_URL_CREDENTIALS;
+    try {
+      expect(() => resolveRepositoryInput("https://user:sample-pass@example.test/org/repo.git"))
+        .toThrow(/embedded credentials/);
+      expect(() => resolveRepositoryInput("https://example.test/org/repo.git?access_token=sample-token"))
+        .toThrow(/embedded credentials/);
+      expect(resolveRepositoryInput("https://example.test/org/repo.git").fetchUrl)
+        .toBe("https://example.test/org/repo.git");
+      process.env.GITA_ALLOW_URL_CREDENTIALS = "1";
+      expect(resolveRepositoryInput("https://user:sample-pass@example.test/org/repo.git").fetchUrl)
+        .toContain("sample-pass");
+    } finally {
+      if (previous === undefined) delete process.env.GITA_ALLOW_URL_CREDENTIALS;
+      else process.env.GITA_ALLOW_URL_CREDENTIALS = previous;
+    }
+  });
+
   it("analyzes commits from all branches while keeping file inventory on the analysis branch", async () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gita-git-engine-"));
     try {

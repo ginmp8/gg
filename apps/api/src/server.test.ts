@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { openGitaDatabase, type GitaDatabase } from "@gita/db";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { buildServer } from "./server";
 
@@ -19,6 +19,7 @@ function createTestDatabase(): GitaDatabase {
 }
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   while (databases.length > 0) {
     databases.pop()?.sqlite.close();
   }
@@ -52,5 +53,45 @@ describe("API server CORS", () => {
       expect(response.headers["access-control-allow-methods"]).toContain("PATCH");
       expect(response.headers["access-control-allow-methods"]).toContain("DELETE");
     }
+  });
+
+  it("does not trust an unrelated service on a different localhost port", async () => {
+    const server = await buildServer(createTestDatabase());
+    try {
+      const response = await server.inject({
+        method: "OPTIONS",
+        url: "/api/branch-views/test",
+        headers: {
+          origin: "http://127.0.0.1:3000",
+          "access-control-request-method": "DELETE"
+        }
+      });
+      expect(response.headers["access-control-allow-origin"]).toBeUndefined();
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("allows explicitly configured origins", async () => {
+    vi.stubEnv("GITA_ALLOWED_WEB_ORIGINS", "https://gita.example.test");
+    const server = await buildServer(createTestDatabase());
+    try {
+      const response = await server.inject({
+        method: "OPTIONS",
+        url: "/api/branch-views/test",
+        headers: {
+          origin: "https://gita.example.test",
+          "access-control-request-method": "PATCH"
+        }
+      });
+      expect(response.headers["access-control-allow-origin"]).toBe("https://gita.example.test");
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("rejects wildcard CORS configuration", async () => {
+    vi.stubEnv("GITA_ALLOWED_WEB_ORIGINS", "*");
+    await expect(buildServer(createTestDatabase())).rejects.toThrow(/exact HTTP\(S\) origins/);
   });
 });
