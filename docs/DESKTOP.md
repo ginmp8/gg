@@ -21,7 +21,9 @@ health response before showing the window. Only Rust may spawn shell processes
 through the Tauri shell plugin. The window has no shell capability.
 
 The window's document-start script receives the local API URL and token on
-trusted Tauri origins only. Every API request presents that bearer token;
+trusted packaged Tauri origins only. The development origin is allowed
+solely in debug builds and never receives a desktop session token in release
+builds. Every API request presents that bearer token;
 cross-origin access alone is insufficient. Sidecar process groups are
 terminated when the native window exits.
 

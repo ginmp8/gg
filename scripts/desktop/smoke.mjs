@@ -31,13 +31,30 @@ const child = spawn(process.execPath, [apiEntry], {
     GITA_DATA_DIR: tmp,
     GITA_DESKTOP_TOKEN: token
   },
-  stdio: "ignore"
+  stdio: ["ignore", "pipe", "pipe"]
 });
+
+let diagnostics = "";
+for (const stream of [child.stdout, child.stderr]) {
+  stream.on("data", (chunk) => {
+    if (diagnostics.length < 4096) {
+      diagnostics += String(chunk).slice(0, 4096 - diagnostics.length);
+    }
+  });
+}
+function safeDiagnostics() {
+  return diagnostics
+    .replaceAll(token, "[redacted]")
+    .replace(/(https?:\/\/)[^\s/?#]*@/gi, "$1[redacted]@")
+    .replace(/([?&](?:token|password|access_token)=)[^&#\s]*/gi, "$1[redacted]");
+}
 
 try {
   let healthy = false;
   for (let i = 0; i < 100; i++) {
-    if (child.exitCode !== null) throw new Error("Sidecar exited before becoming ready");
+    if (child.exitCode !== null) {
+      throw new Error(`Sidecar exited before becoming ready (code ${child.exitCode}): ${safeDiagnostics()}`);
+    }
     try {
       const result = await fetch(`http://127.0.0.1:${port}/api/health`, {
         headers: { authorization: `Bearer ${token}` },
@@ -47,7 +64,7 @@ try {
     } catch {}
     await new Promise((resolve) => setTimeout(resolve, 150));
   }
-  assert.ok(healthy, "Packaged API did not start");
+  assert.ok(healthy, `Packaged API did not start: ${safeDiagnostics()}`);
   const denied = await fetch(`http://127.0.0.1:${port}/api/health`);
   assert.equal(denied.status, 401);
   const allowed = await fetch(`http://127.0.0.1:${port}/api/health`, {

@@ -102,9 +102,18 @@ fn main() {
                 "apiBase": format!("http://127.0.0.1:{port}"),
                 "token": token
             });
+            let mut trusted_origins = vec![
+                "tauri://localhost",
+                "http://tauri.localhost",
+                "https://tauri.localhost",
+            ];
+            if cfg!(debug_assertions) {
+                trusted_origins.push("http://127.0.0.1:4444");
+            }
+            let origins_json = serde_json::to_string(&trusted_origins)?;
             let init_script = format!(
-                "if (['tauri://localhost', 'http://tauri.localhost', 'https://tauri.localhost', 'http://127.0.0.1:4444'].includes(window.location.origin)) {{ Object.defineProperty(window, '__GITA_DESKTOP__', {{ value: Object.freeze({}), writable: false, configurable: false }}); }}",
-                connection
+                "if ({}.includes(window.location.origin)) {{ Object.defineProperty(window, '__GITA_DESKTOP__', {{ value: Object.freeze({}), writable: false, configurable: false }}); }}",
+                origins_json, connection
             );
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("Gita")

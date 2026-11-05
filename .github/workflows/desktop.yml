@@ -16,6 +16,9 @@ on:
 permissions:
   contents: read
 
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+
 concurrency:
   group: gita-desktop-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false

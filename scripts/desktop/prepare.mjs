@@ -30,6 +30,11 @@ await build({
   target: "node24",
   bundle: true,
   external: ["better-sqlite3"],
+  // Bundled CommonJS dependencies can require Node built-ins dynamically.
+  // In an ESM output, provide a real require scoped to the bundled entry.
+  banner: {
+    js: 'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);'
+  },
   logLevel: "warning"
 });
 
