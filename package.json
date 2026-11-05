@@ -37,5 +37,9 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.33.1",
     "vitest": "^3.2.2"
+  },
+  "overrides": {
+    "postcss": "8.5.32",
+    "zod": "4.6.7"
   }
 }
