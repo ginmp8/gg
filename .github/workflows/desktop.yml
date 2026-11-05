@@ -81,8 +81,9 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
       - name: Install reproducible Node dependencies
         run: npm ci
-      - name: Install pinned Tauri CLI
-        run: cargo install tauri-cli --version 2.12.4 --locked
+      - name: Verify bundled Tauri CLI
+        shell: bash
+        run: node node_modules/@tauri-apps/cli/tauri.js --version
       - name: Verify native target architecture
         shell: bash
         env:
@@ -100,13 +101,13 @@ jobs:
         run: node scripts/desktop/smoke.mjs
       - name: Generate application icons from the checked-in SVG
         working-directory: apps/desktop
-        run: cargo tauri icon ../../assets/gita-desktop-icon.svg
+        run: node ../../node_modules/@tauri-apps/cli/tauri.js icon ../../assets/gita-desktop-icon.svg
       - name: Build Tauri installer
         working-directory: apps/desktop
         env:
           BUNDLES: ${{ matrix.bundles }}
         shell: bash
-        run: cargo tauri build --bundles "$BUNDLES"
+        run: node ../../node_modules/@tauri-apps/cli/tauri.js build --bundles "$BUNDLES"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: gita-desktop-${{ matrix.artifact }}

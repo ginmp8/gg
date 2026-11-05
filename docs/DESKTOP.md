@@ -48,7 +48,9 @@ before broad use.
 
 Install Node.js **24**, npm, Git, a compatible Rust toolchain and the
 platform-specific [Tauri v2 prerequisites](https://v2.tauri.app/start/prerequisites/).
-The Tauri CLI used by CI is pinned to `2.12.4`.
+The official npm Tauri CLI used by CI is pinned to `2.12.4`, as in
+PandaCode's reproducible desktop builds. It is installed by `npm ci`;
+no global `cargo install` and no npm publication are required.
 
 From the repository root:
 
@@ -58,14 +60,13 @@ npm run desktop:check
 npm run lint
 npm run typecheck
 npm run test
-cargo install tauri-cli --version 2.12.4 --locked
 # Static Next.js export (keep normal server-side web build unchanged)
 GITA_DESKTOP=1 npm --workspace @gita/web run build
 npm run desktop:prepare
 node scripts/desktop/smoke.mjs
 cd apps/desktop
-cargo tauri icon ../../assets/gita-desktop-icon.svg
-cargo tauri build
+node ../../node_modules/@tauri-apps/cli/tauri.js icon ../../assets/gita-desktop-icon.svg
+node ../../node_modules/@tauri-apps/cli/tauri.js build
 ```
 
 On PowerShell, set `$env:GITA_DESKTOP="1"` before the web build and
@@ -74,7 +75,7 @@ copies the Node executable and the native SQLite binding for the current
 host. Its generated resources and icons are Git-ignored.
 
 To develop the desktop window, run `npm run dev` from the root in a
-separate terminal, then `cargo tauri dev` from `apps/desktop` after
+separate terminal, then `node ../../node_modules/@tauri-apps/cli/tauri.js dev` from `apps/desktop` after
 the native sidecar and icons have been prepared. The local web server stays
 available for browser development.
 
