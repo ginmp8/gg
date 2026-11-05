@@ -69,6 +69,26 @@ npm audit --omit=dev --audit-level=high
 CI failure must be fixed at the source, not bypassed by disabling
 checks, weakening assertions, or silently updating unrelated packages.
 
+## Network/privacy controls (2026-11-05)
+
+Application egress is now **opt-in**, using
+`GITA_ALLOW_REMOTE_GIT=1` and `GITA_ALLOW_GITHUB_METADATA=1`.
+`GITA_OFFLINE=1` blocks both even if enabled. Default Git subprocesses
+receive `GIT_ALLOW_PROTOCOL=file` to reject external Git transports,
+including through already cached mirrors. The Github adapter and process
+runner do not launch `gh` without explicit consent. The Next.js CLI
+telemetry option is disabled for local `dev` and `build`.
+
+Regression tests cover the default-deny behavior and a dummy loopback
+network endpoint for opt-in behavior. Source code and tests do not
+establish OS-wide absence of network traffic; use a system firewall and
+capture real process traffic for an executable-level assurance.
+
+**Retention is unchanged by request:** removing a repository record does
+not delete a locally cached mirror.
+
+See [Network and privacy](NETWORK-PRIVACY.md).
+
 ## Tauri Desktop threat boundary
 
 The optional Tauri desktop has a separate security mode:

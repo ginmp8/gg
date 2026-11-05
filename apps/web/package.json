@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev -H 127.0.0.1 -p 4444",
-    "build": "next build",
+    "dev": "node ../../scripts/next.mjs dev -H 127.0.0.1 -p 4444",
+    "build": "node ../../scripts/next.mjs build",
     "test": "vitest run --passWithNoTests",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json"

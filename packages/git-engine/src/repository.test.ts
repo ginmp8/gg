@@ -3,11 +3,27 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { analyzeRepository, ensureMirrorRepository, resolveRepositoryInput } from "./repository";
 
+afterEach(() => vi.unstubAllEnvs());
+
 describe("repository analysis", () => {
+  it("rejects remote repository refresh before creating a mirror by default", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gita-offline-"));
+    try {
+      const mirror = path.join(tmpDir, "private.git");
+      await expect(ensureMirrorRepository({
+        fetchUrl: "https://example.invalid/private.git",
+        cachePath: mirror,
+        reposRoot: tmpDir
+      })).rejects.toThrow(/GITA_ALLOW_REMOTE_GIT=1/);
+      expect(fs.existsSync(mirror)).toBe(false);
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
   it("rejects embedded HTTPS credentials unless deliberately enabled", () => {
     const previous = process.env.GITA_ALLOW_URL_CREDENTIALS;
     delete process.env.GITA_ALLOW_URL_CREDENTIALS;
@@ -24,6 +40,24 @@ describe("repository analysis", () => {
     } finally {
       if (previous === undefined) delete process.env.GITA_ALLOW_URL_CREDENTIALS;
       else process.env.GITA_ALLOW_URL_CREDENTIALS = previous;
+    }
+  });
+
+  it("rejects an existing mirror whose origin was changed to an HTTP remote", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gita-cache-egress-"));
+    try {
+      const sourcePath = path.join(tmpDir, "source.git");
+      const cachePath = path.join(tmpDir, "mirror.git");
+      git(["init", "--bare", sourcePath]);
+      await ensureMirrorRepository({ fetchUrl: sourcePath, cachePath, reposRoot: tmpDir });
+      git(["-C", cachePath, "remote", "set-url", "origin", "http://127.0.0.1:9/dummy.git"]);
+      await expect(ensureMirrorRepository({
+        fetchUrl: sourcePath, cachePath, reposRoot: tmpDir
+      })).rejects.toMatchObject({
+        result: { stderr: expect.stringMatching(/transport 'http' not allowed/i) }
+      });
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
     }
   });
 

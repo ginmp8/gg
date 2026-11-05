@@ -1,5 +1,7 @@
 import { spawn } from "node:child_process";
 
+import { isGitHubMetadataAllowed, isRemoteGitAllowed } from "./network-policy";
+
 export interface GitCommandResult {
   command: string;
   args: string[];
@@ -47,11 +49,26 @@ export async function runProcess(
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const safeArgs = args.map(redactSecrets);
 
+  // The CLI is a network-capable process even for apparently local status
+  // commands. Do not start it until the user explicitly opts in.
+  if (command === "gh" && !isGitHubMetadataAllowed()) {
+    throw new Error(
+      "GitHub metadata access is disabled. Set GITA_ALLOW_GITHUB_METADATA=1 to enable it."
+    );
+  }
+
+  const childEnv = { ...process.env };
+  // A future packaged desktop may use a private API token. Neither Git nor
+  // the GitHub CLI needs it, so do not leak it into child processes.
+  delete childEnv.GITA_DESKTOP_TOKEN;
+  if (command === "git" && !isRemoteGitAllowed()) {
+    // Covers existing mirrors and Git URL rewrites in user/global config:
+    // reject HTTP(S), SSH and external Git remote helpers before connection.
+    childEnv.GIT_ALLOW_PROTOCOL = "file";
+    childEnv.GIT_TERMINAL_PROMPT = "0";
+  }
+
   return new Promise<GitCommandResult>((resolve, reject) => {
-    // The desktop session token authenticates only the API and must never
-    // flow into Git, GitHub CLI, credential helpers or subprocesses.
-    const childEnv = { ...process.env };
-    delete childEnv.GITA_DESKTOP_TOKEN;
     const child = spawn(command, args, {
       cwd: options.cwd,
       env: childEnv,
