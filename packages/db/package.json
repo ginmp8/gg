@@ -20,8 +20,8 @@
   "dependencies": {
     "@gita/core": "0.1.0",
     "better-sqlite3": "^12.10.0",
-    "drizzle-orm": "^0.44.2",
-    "zod": "^3.25.56"
+    "drizzle-orm": "0.45.4",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "drizzle-kit": "^0.31.1",
