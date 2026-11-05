@@ -94,20 +94,40 @@ The optional Tauri desktop has a separate security mode:
 
 See [Desktop architecture](DESKTOP.md) for the trust boundaries.
 
-## Known supply-chain blockers observed on CI (2026-11-05)
+## Production dependency remediation (2026-11-05)
 
-The original Gita lockfile already fails `npm audit --omit=dev
---audit-level=high`: the CI audit reported **9 high and 2 moderate
-findings**. Important high-severity candidates include `drizzle-orm`,
-`fast-uri`, `fastify`, `find-my-way`, `nanoid`, `postcss`, `sharp`,
-`source-map-js` and `zod`. Applicability of each advisory to Gita's
-specific call sites has not been independently proven.
+The baseline lockfile failed the production-only audit with **9 high and
+2 moderate** findings. Commit `31ced5a8` upgrades and pins the production
+dependencies needed to address these findings:
 
-Some upstream remediations require breaking dependency upgrades, especially
-Drizzle ORM and Zod. The Next.js 15 dependency tree also pins a PostCSS
-version with an advisory. Do not override these libraries without a separate
-compatibility-tested migration. The existing audit gate is NOT relaxed:
-unresolved findings block the verification job and therefore **prevent
-GitHub Release publication**. Installer packaging may still run to expose
-separate desktop integration failures. A green desktop build alone is not
-a green security audit.
+- Fastify `5.12.8` (existing major version).
+- Drizzle ORM `0.45.4`, Zod `4.6.7` and ECharts `6.1.0` (version
+  upgrades tested against Gita's existing application contracts).
+- Patched compatible transitive dependencies, including Git routing,
+  `sharp`, `nanoid`, `fast-uri`, and source-map libraries.
+- Root-level npm overrides for `postcss: 8.5.32` and `zod: 4.6.7`,
+  preventing vulnerable nested versions from being installed. This
+  retains Next.js `15.5.29` instead of upgrading to Next.js 16;
+  the override is **intentional compatibility debt** and must be
+  reverified on any future Next.js update.
+
+The GitHub Actions candidate run
+[42023920280](https://github.com/ginmp8/gita/actions/runs/42023920280)
+executed `npm ci`, `desktop:check`, lint, typecheck, existing tests,
+full application build and `npm audit --omit=dev --audit-level=high`.
+**All passed; the production-only audit found 0 vulnerabilities.**
+This confirms the audited dependency state, not the absence of all
+application vulnerabilities or a complete visual/end-to-end GUI test.
+
+**Residual risk:** `npm ci` still reported 20 advisories in the full
+development-inclusive dependency inventory (14 moderate, 4 high, 2
+critical) on that run. These are not counted by `--omit=dev`; the
+build toolchain and development dependencies require separate review.
+Do not claim a comprehensive clean bill of security based only on the
+production audit. Continue to gate GitHub Release publication on
+verification and installer jobs, and validate GUI use before release.
+
+The temporary write-authorized dependency remediation workflow was
+removed after generating the verified lockfile. Normal CI jobs have
+read-only GitHub contents permissions; only manually approved GitHub
+Release publication can request write access.
