@@ -1,15 +1,13 @@
 "use client";
 
 import type { AnnualContributor } from "@gg/core";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { Download, RefreshCw } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Download } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { AnnualMonthlyChart } from "@/components/annual-monthly-chart";
 import { AnnualEvidencePanel } from "@/components/annual-evidence-panel";
-import {
-  getAnnualReport, indexAnnualProject
-} from "@/lib/api";
+import { getAnnualReport } from "@/lib/api";
 import { annualCsv, downloadLocalReport } from "@/lib/annual-export";
 
 type SortKey = "contribution" | "productivity" | "commits" | "adjustedChurn" | "substantiveCommits" | "reviewableChurn" | "testTouchedCommits";
@@ -35,12 +33,8 @@ function csvName(year: number): string {
 }
 
 export function AnnualAnalytics({
-  projectId, repositoryId, onRunStarted
-}: {
-  projectId: string;
-  repositoryId: string;
-  onRunStarted: (runId: string) => void;
-}) {
+  projectId, repositoryId
+}: { projectId: string; repositoryId: string }) {
   const [yearText, setYearText] = useState(String(new Date().getFullYear()));
   const year = Number(yearText);
   const validYear = Number.isInteger(year) && year >= 1970 && year <= 2100;
@@ -52,10 +46,6 @@ export function AnnualAnalytics({
     queryKey: ["annual", projectId, year, repoFilter],
     queryFn: () => getAnnualReport(projectId, year, repoFilter),
     enabled: validYear
-  });
-  const indexMutation = useMutation({
-    mutationFn: () => indexAnnualProject(projectId),
-    onSuccess: (run) => onRunStarted(run.id)
   });
   const report = annualQuery.data;
   const scoreByEmail = useMemo(() => new Map(
@@ -104,11 +94,6 @@ export function AnnualAnalytics({
               aria-label="Analysis year"
             />
           </label>
-          <button type="button" disabled={indexMutation.isPending}
-            onClick={() => indexMutation.mutate()}
-            className="inline-flex h-9 items-center gap-2 rounded border border-border bg-panel px-3 text-sm hover:bg-muted disabled:opacity-50">
-            <RefreshCw className="h-4 w-4" /> Index local history
-          </button>
           <button type="button" disabled={!report} onClick={() => exportReport("csv")}
             className="inline-flex h-9 items-center gap-2 rounded border border-border bg-panel px-3 text-sm hover:bg-muted disabled:opacity-50">
             <Download className="h-4 w-4" /> CSV
@@ -122,10 +107,6 @@ export function AnnualAnalytics({
 
       {!validYear ? <p role="alert" className="text-sm text-danger">Enter a year between 1970 and 2100.</p> : null}
       {annualQuery.isError ? <p role="alert" className="text-sm text-danger">{annualQuery.error.message}</p> : null}
-      {indexMutation.isError ? <p role="alert" className="text-sm text-danger">{indexMutation.error.message}</p> : null}
-      {indexMutation.isSuccess ? <p role="status" className="text-sm text-muted-foreground">
-        Local indexing has started. Progress appears in the dashboard header.
-      </p> : null}
 
       {report ? (
         <>
@@ -140,9 +121,9 @@ export function AnnualAnalytics({
           </div>
           {!report.complete && (
             <div role="status" className="rounded-md border border-warning/60 bg-warning/10 p-3 text-sm">
-              Coverage is incomplete. Click <strong>Index local history</strong> to process existing
-              mirrors, or refresh the project first to fetch missing repositories.
-              Do not compare partial counts as full-year totals.
+              Coverage is incomplete. Use <strong>Settings → Data synchronization</strong> to
+              reindex local metrics or fetch missing repository mirrors. Do not compare partial
+              counts as full-year totals.
             </div>
           )}
           <AnnualEvidencePanel report={report.evidenceScores} />
