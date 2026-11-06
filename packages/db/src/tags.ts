@@ -46,17 +46,27 @@ export function deleteProjectTag(db: GitaDatabase, projectId: string, tagId: str
 }
 function validateTarget(db: GitaDatabase, projectId: string, type: TagTargetType, key: string): boolean {
   const lookup: Record<TagTargetType, string> = {
-    contributor: "SELECT 1 FROM commits c JOIN repositories r ON r.id=c.repo_id " +
+    contributor: "SELECT 1 FROM (" +
+      "SELECT lower(COALESCE(a.canonical_email,c.author_email)) AS email " +
+      "FROM commits c JOIN repositories r ON r.id=c.repo_id " +
       "LEFT JOIN annual_identity_links a ON a.project_id=r.project_id " +
-      "AND lower(a.email)=lower(c.author_email) " +
-      "WHERE r.project_id=? AND lower(COALESCE(a.canonical_email,c.author_email))=? LIMIT 1",
+      "AND lower(a.email)=lower(c.author_email) WHERE r.project_id=? " +
+      "UNION ALL " +
+      "SELECT lower(COALESCE(a.canonical_email,m.author_email)) AS email " +
+      "FROM annual_commit_metrics m JOIN repositories r ON r.id=m.repo_id " +
+      "LEFT JOIN annual_identity_links a ON a.project_id=r.project_id " +
+      "AND lower(a.email)=lower(m.author_email) WHERE r.project_id=?" +
+      ") WHERE email=? LIMIT 1",
     repository: "SELECT 1 FROM repositories WHERE project_id=? AND id=? LIMIT 1",
     branch: "SELECT 1 FROM branches b JOIN repositories r ON r.id=b.repo_id " +
       "WHERE r.project_id=? AND b.repo_id=? AND b.name=? LIMIT 1",
     pull_request: "SELECT 1 FROM pull_requests p JOIN repositories r ON r.id=p.repo_id " +
       "WHERE r.project_id=? AND p.repo_id=? AND p.provider_id=? LIMIT 1"
   };
-  if (type === "contributor" || type === "repository") {
+  if (type === "contributor") {
+    return Boolean(db.sqlite.prepare(lookup[type]).get(projectId, projectId, key));
+  }
+  if (type === "repository") {
     return Boolean(db.sqlite.prepare(lookup[type]).get(projectId, key));
   }
   const sep = key.indexOf(":");
@@ -83,11 +93,22 @@ export function setProjectTagAssignment(
 }
 function targetSql(type: TagTargetType): string {
   switch (type) {
-    case "contributor": return "SELECT lower(COALESCE(a.canonical_email,c.author_email)) AS key," +
-      " MAX(c.author_name) AS label, COUNT(DISTINCT c.repo_id) || ' repos' AS detail " +
+    case "contributor": return "SELECT key,MAX(label) AS label," +
+      "COUNT(DISTINCT repoId) || ' repos' AS detail FROM (" +
+      "SELECT lower(COALESCE(a.canonical_email,c.author_email)) AS key," +
+      "MAX(c.author_name) AS label,c.repo_id AS repoId " +
       "FROM commits c JOIN repositories r ON r.id=c.repo_id " +
       "LEFT JOIN annual_identity_links a ON a.project_id=r.project_id " +
-      "AND lower(a.email)=lower(c.author_email) WHERE r.project_id=? GROUP BY key";
+      "AND lower(a.email)=lower(c.author_email) WHERE r.project_id=? " +
+      "GROUP BY c.repo_id,key " +
+      "UNION ALL " +
+      "SELECT lower(COALESCE(a.canonical_email,m.author_email)) AS key," +
+      "MAX(m.author_name) AS label,m.repo_id AS repoId " +
+      "FROM annual_commit_metrics m JOIN repositories r ON r.id=m.repo_id " +
+      "LEFT JOIN annual_identity_links a ON a.project_id=r.project_id " +
+      "AND lower(a.email)=lower(m.author_email) WHERE r.project_id=? " +
+      "GROUP BY m.repo_id,key" +
+      ") GROUP BY key";
     case "repository": return "SELECT id AS key,name AS label,provider AS detail FROM repositories WHERE project_id=?";
     case "branch": return "SELECT b.repo_id || ':' || b.name AS key," +
       "r.name || ' / ' || b.name AS label,COALESCE(b.remote,'local') AS detail " +
@@ -103,10 +124,11 @@ export function listProjectTagTargets(
   const needle = "%" + search.trim().toLowerCase().replace(/[\\%_]/g, c => "\\" + c) + "%";
   const sub = " FROM (" + targetSql(type) + ") AS targets WHERE " +
     "(lower(label) LIKE ? ESCAPE '\\' OR lower(key) LIKE ? ESCAPE '\\')";
+  const bindings = type === "contributor" ? [projectId, projectId] : [projectId];
   const total = (db.sqlite.prepare("SELECT COUNT(*) AS count" + sub)
-    .get(projectId,needle,needle) as { count: number }).count;
+    .get(...bindings,needle,needle) as { count: number }).count;
   const rows = db.sqlite.prepare("SELECT key,label,detail" + sub +
     " ORDER BY label COLLATE NOCASE,key LIMIT ?"
-  ).all(projectId,needle,needle,limit) as Array<{key:string;label:string;detail:string}>;
+  ).all(...bindings,needle,needle,limit) as Array<{key:string;label:string;detail:string}>;
   return { items: rows.map(row => ({ ...row, type })), total };
 }

@@ -6,8 +6,8 @@ import { useState } from "react";
 import { getLocalDataHealth } from "@/lib/api";
 
 const examples = [
-  { id: "catalog", label: "Available commands", build: (_project: string) => "npm run cli -- catalog" },
-  { id: "projects", label: "List projects", build: (_project: string) => "npm run cli -- projects" },
+  { id: "catalog", label: "Available commands", build: () => "npm run cli -- catalog" },
+  { id: "projects", label: "List projects", build: () => "npm run cli -- projects" },
   { id: "summary", label: "Project overview", build: (project: string) => "npm run cli -- summary --project " + project },
   { id: "scores", label: "All contributor scores", build: (project: string) =>
     "npm run cli -- scores --project " + project + " --year " + new Date().getFullYear() },
@@ -15,9 +15,9 @@ const examples = [
     "npm run cli -- annual --project " + project + " --year " + new Date().getFullYear() },
   { id: "contributors", label: "Contributors", build: (project: string) =>
     "npm run cli -- contributors --project " + project + " --limit 100" },
-  { id: "commits", label: "Raw commit records", build: (_project: string) =>
+  { id: "commits", label: "Raw commit records", build: () =>
     "npm run cli -- table --table commits --limit 100" },
-  { id: "filechanges", label: "Annual file-diff evidence", build: (_project: string) =>
+  { id: "filechanges", label: "Annual file-diff evidence", build: () =>
     "npm run cli -- table --table annual_file_changes --limit 100" }
 ];
 
