@@ -53,6 +53,9 @@ import { AnnualIdentitySettings } from "@/components/annual-identity-settings";
 import { ContributorSideBySide } from "@/components/contributor-side-by-side";
 import { TagSettings } from "@/components/tag-settings";
 import { LocalCliSettings } from "@/components/local-cli-settings";
+import {
+  currentYearToDate, readDashboardScopePreference, storeDashboardScopePreference
+} from "@/lib/analytics-preferences";
 import { BranchComparisonPanel } from "@/components/branch-comparison";
 import { GitHubRepositoryPicker } from "@/components/github-repository-picker";
 import {
@@ -161,12 +164,13 @@ export function Dashboard() {
   const [branchPage, setBranchPage] = useState(0);
   const [prPage, setPrPage] = useState(0);
   const [selectedContributorId, setSelectedContributorId] = useState<string | null>(null);
-  const [datePreset, setDatePreset] = useState<DateRangePreset>("all");
+  const [datePreset, setDatePreset] = useState<DateRangePreset>("year");
   const [monthCursor, setMonthCursor] = useState(() => startOfMonth(new Date()));
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [from, setFrom] = useState(() => currentYearToDate(new Date()).from);
+  const [to, setTo] = useState(() => currentYearToDate(new Date()).to);
   const [dateRangeRestored, setDateRangeRestored] = useState(false);
   const [metric, setMetric] = useState("commits");
+  const [scopeRestored, setScopeRestored] = useState(false);
   const [branchSelection, setBranchSelection] = useState<BranchSelectionState>({});
   const [folderFilters, setFolderFilters] = useState<FolderFilterState>({});
   const [activeBranchViewId, setActiveBranchViewId] = useState(CUSTOM_BRANCH_VIEW_ID);
@@ -197,18 +201,45 @@ export function Dashboard() {
   const projects = projectsQuery.data?.items ?? [];
 
   useEffect(() => {
-    if (!selectedProjectId && projects[0]) {
-      setSelectedProjectId(projects[0].id);
+    const saved = readDashboardScopePreference();
+    if (saved) {
+      setSelectedProjectId(saved.projectId);
+      setSelectedRepoId(saved.repositoryId);
+      setMetric(saved.metric);
     }
-  }, [projects, selectedProjectId]);
+    setScopeRestored(true);
+  }, []);
+
+  useEffect(() => {
+    if (!scopeRestored || !projectsQuery.isSuccess) return;
+    if (!selectedProjectId || !projects.some(project => project.id === selectedProjectId)) {
+      setSelectedProjectId(projects[0]?.id ?? null);
+      setSelectedRepoId("all");
+    }
+  }, [projects, projectsQuery.isSuccess, scopeRestored, selectedProjectId]);
+
+  useEffect(() => {
+    if (!scopeRestored) return;
+    storeDashboardScopePreference({
+      projectId: selectedProjectId, repositoryId: selectedRepoId, metric
+    });
+  }, [metric, scopeRestored, selectedProjectId, selectedRepoId]);
 
   useEffect(() => {
     const storedDateRange = readStoredDateRange();
     if (storedDateRange) {
       setDatePreset(storedDateRange.preset);
-      setFrom(storedDateRange.from);
-      setTo(storedDateRange.to);
-      setMonthCursor(parseDateInput(storedDateRange.monthCursor) ?? startOfMonth(new Date()));
+      if (storedDateRange.preset === "year") {
+        // Keep a saved rolling year-to-date selection current after restarting on a later day.
+        const rolling = resolveDatePreset("year", new Date());
+        setFrom(rolling.from);
+        setTo(rolling.to);
+        setMonthCursor(rolling.monthCursor);
+      } else {
+        setFrom(storedDateRange.from);
+        setTo(storedDateRange.to);
+        setMonthCursor(parseDateInput(storedDateRange.monthCursor) ?? startOfMonth(new Date()));
+      }
     }
     setDateRangeRestored(true);
   }, []);
@@ -248,10 +279,12 @@ export function Dashboard() {
   }, [selectedProjectId]);
 
   useEffect(() => {
-    if (selectedRepoId !== "all" && !repositories.some((repo) => repo.id === selectedRepoId)) {
+    // Do not erase a restored repository choice while its project repositories are loading.
+    if (repositoriesQuery.isSuccess && selectedRepoId !== "all" &&
+      !repositories.some((repo) => repo.id === selectedRepoId)) {
       setSelectedRepoId("all");
     }
-  }, [repositories, selectedRepoId]);
+  }, [repositories, repositoriesQuery.isSuccess, selectedRepoId]);
 
   const filters = useMemo<DashboardFilters>(
     () => ({
@@ -830,7 +863,7 @@ export function Dashboard() {
               value={selectedProjectId ?? ""}
               placeholder="Project"
               disabled={projects.length === 0}
-              onValueChange={setSelectedProjectId}
+              onValueChange={projectId => { setSelectedProjectId(projectId); setSelectedRepoId("all"); }}
               items={projects.map((project) => ({ value: project.id, label: project.name }))}
             />
             <SelectBox
@@ -2605,6 +2638,7 @@ function RepositoryDialog({
 }
 
 type DateRangePreset =
+  | "year"
   | "all"
   | "month"
   | "previous-month"
@@ -2615,6 +2649,7 @@ type DateRangePreset =
   | "custom";
 
 const dateRangePresetItems: Array<{ value: DateRangePreset; label: string }> = [
+  { value: "year", label: "Year to date" },
   { value: "all", label: "All time" },
   { value: "month", label: "This month" },
   { value: "previous-month", label: "Previous month" },
@@ -3131,6 +3166,10 @@ function resolveDatePreset(
   now: Date
 ): { from: string; to: string; monthCursor: Date } {
   const today = startOfDay(now);
+
+  if (preset === "year") {
+    return { ...currentYearToDate(today), monthCursor: startOfMonth(today) };
+  }
 
   if (preset === "all") {
     return { from: "", to: "", monthCursor: startOfMonth(today) };
