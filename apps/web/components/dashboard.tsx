@@ -22,6 +22,7 @@ import {
   Plus,
   RefreshCw,
   Save,
+  Settings2,
   Search,
   Trash2,
   Users,
@@ -48,6 +49,8 @@ import type {
 
 import { ActivityChart } from "@/components/activity-chart";
 import { AnnualAnalytics } from "@/components/annual-analytics";
+import { ContributorSideBySide } from "@/components/contributor-side-by-side";
+import { TagSettings } from "@/components/tag-settings";
 import { BranchComparisonPanel } from "@/components/branch-comparison";
 import { GitHubRepositoryPicker } from "@/components/github-repository-picker";
 import {
@@ -692,15 +695,7 @@ export function Dashboard() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {currentRun ? <RefreshStatus run={currentRun} /> : null}
-              <ThemeToggle />
-              <GitHubRepositoryPicker
-                projectId={selectedProjectId}
-                repositories={repositories}
-                onImported={() => {
-                  void queryClient.invalidateQueries({ queryKey: ["repositories", selectedProjectId] });
-                  void queryClient.invalidateQueries({ queryKey: ["summary", selectedProjectId] });
-                }}
-              />
+              {projects.length === 0 ? (
               <ProjectDialog
                 open={projectDialogOpen}
                 onOpenChange={setProjectDialogOpen}
@@ -708,139 +703,12 @@ export function Dashboard() {
                 error={createProjectMutation.error}
                 onSubmit={(input) => createProjectMutation.mutate(input)}
               />
-              <RepositoryDialog
-                open={repositoryDialogOpen}
-                onOpenChange={setRepositoryDialogOpen}
-                disabled={!selectedProjectId}
-                pending={createRepositoryMutation.isPending}
-                error={createRepositoryMutation.error}
-                onSubmit={(input) => createRepositoryMutation.mutate(input)}
-              />
-              <IconButton
-                label="Delete project and local data"
-                onClick={() => setProjectDeleteOpen(true)}
-                disabled={!selectedProjectId || deleteProjectMutation.isPending}
-              >
-                <Trash2 className="h-4 w-4 text-danger" />
-              </IconButton>
-              <IconButton
-                label="Refresh project"
-                onClick={() => refreshProjectMutation.mutate()}
-                disabled={!selectedProjectId || refreshProjectMutation.isPending}
-              >
-                <RefreshCw className={iconClass(refreshProjectMutation.isPending)} />
-              </IconButton>
-              <IconButton
-                label="Refresh repository"
-                onClick={() => refreshRepositoryMutation.mutate()}
-                disabled={selectedRepoId === "all" || refreshRepositoryMutation.isPending}
-              >
-                <GitBranch className={iconClass(refreshRepositoryMutation.isPending)} />
-              </IconButton>
+              ) : null}
             </div>
           </div>
 
-          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_minmax(520px,2fr)_160px]">
-            <SelectBox
-              value={selectedProjectId ?? ""}
-              placeholder="Project"
-              disabled={projects.length === 0}
-              onValueChange={setSelectedProjectId}
-              items={projects.map((project) => ({ value: project.id, label: project.name }))}
-            />
-            <SelectBox
-              value={selectedRepoId}
-              placeholder="Repository"
-              disabled={!selectedProjectId}
-              onValueChange={setSelectedRepoId}
-              items={[
-                { value: "all", label: "All repositories" },
-                ...repositories.map((repo) => ({ value: repo.id, label: repo.name }))
-              ]}
-            />
-            <DateRangeControls
-              preset={datePreset}
-              monthCursor={monthCursor}
-              from={from}
-              to={to}
-              onPresetChange={(preset) => {
-                const nextRange = resolveDatePreset(preset, new Date());
-                setDatePreset(preset);
-                setMonthCursor(nextRange.monthCursor);
-                setFrom(nextRange.from);
-                setTo(nextRange.to);
-              }}
-              onMonthShift={(offset) => {
-                const shiftedMonth = addMonths(monthCursor, offset);
-                const nextRange = monthRange(shiftedMonth);
-                setDatePreset("month");
-                setMonthCursor(startOfMonth(shiftedMonth));
-                setFrom(nextRange.from);
-                setTo(nextRange.to);
-              }}
-              onFromChange={(value) => {
-                setDatePreset("custom");
-                setFrom(value);
-              }}
-              onToChange={(value) => {
-                setDatePreset("custom");
-                setTo(value);
-              }}
-            />
-            <SelectBox
-              value={metric}
-              placeholder="Metric"
-              onValueChange={setMetric}
-              items={[
-                { value: "commits", label: "Commits" },
-                { value: "churn", label: "Churn" },
-                { value: "insertions", label: "Insertions" },
-                { value: "deletions", label: "Deletions" },
-                { value: "netLines", label: "Net lines" },
-                { value: "files", label: "Files" },
-                { value: "lines", label: "Lines" }
-              ]}
-            />
-          </div>
 
-          <BranchViewControls
-            activeViewId={activeBranchViewId}
-            views={branchViews}
-            branchSettings={visibleBranchSettings}
-            selection={branchSelection}
-            folderFilters={folderFilters}
-            pending={
-              branchViewsQuery.isLoading ||
-              createBranchViewMutation.isPending ||
-              updateBranchViewMutation.isPending ||
-              deleteBranchViewMutation.isPending
-            }
-            error={branchViewError}
-            onViewChange={handleBranchViewChange}
-            onOpenEditor={() => setBranchEditorOpen(true)}
-            onSave={() => setBranchViewNameDialog({ mode: "save", initialName: "" })}
-            onUpdate={handleSaveActiveBranchView}
-            onDuplicate={() => {
-              const viewId = activeBranchViewIdRef.current;
-              const view = branchViews.find((item) => item.id === viewId);
-              setBranchViewNameDialog({
-                mode: "duplicate",
-                initialName: `${view?.name ?? "Custom"} copy`
-              });
-            }}
-            onRename={() => {
-              const viewId = activeBranchViewIdRef.current;
-              if (viewId !== "custom") {
-                const view = branchViews.find((item) => item.id === viewId);
-                setBranchViewNameDialog({
-                  mode: "rename",
-                  initialName: view?.name ?? "",
-                  viewId
-                });
-              }
-            }}
-            onDelete={handleDeleteActiveBranchView}
-          />
+
           <BranchSelectionDialog
             open={branchEditorOpen}
             onOpenChange={setBranchEditorOpen}
@@ -942,7 +810,82 @@ export function Dashboard() {
                 icon={<GitPullRequest className="h-4 w-4" />}
                 label="Pull requests"
               />
+              <TabTrigger
+                value="compare"
+                icon={<Users className="h-4 w-4" />}
+                label="Compare"
+              />
+              <TabTrigger
+                value="settings"
+                icon={<Settings2 className="h-4 w-4" />}
+                label="Settings"
+              />
             </Tabs.List>
+            <section aria-label="Analytics scope and filters" className="rounded-md border border-border bg-panel p-3">
+              <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Analysis scope</div>
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_minmax(520px,2fr)_160px]">
+            <SelectBox
+              value={selectedProjectId ?? ""}
+              placeholder="Project"
+              disabled={projects.length === 0}
+              onValueChange={setSelectedProjectId}
+              items={projects.map((project) => ({ value: project.id, label: project.name }))}
+            />
+            <SelectBox
+              value={selectedRepoId}
+              placeholder="Repository"
+              disabled={!selectedProjectId}
+              onValueChange={setSelectedRepoId}
+              items={[
+                { value: "all", label: "All repositories" },
+                ...repositories.map((repo) => ({ value: repo.id, label: repo.name }))
+              ]}
+            />
+            <DateRangeControls
+              preset={datePreset}
+              monthCursor={monthCursor}
+              from={from}
+              to={to}
+              onPresetChange={(preset) => {
+                const nextRange = resolveDatePreset(preset, new Date());
+                setDatePreset(preset);
+                setMonthCursor(nextRange.monthCursor);
+                setFrom(nextRange.from);
+                setTo(nextRange.to);
+              }}
+              onMonthShift={(offset) => {
+                const shiftedMonth = addMonths(monthCursor, offset);
+                const nextRange = monthRange(shiftedMonth);
+                setDatePreset("month");
+                setMonthCursor(startOfMonth(shiftedMonth));
+                setFrom(nextRange.from);
+                setTo(nextRange.to);
+              }}
+              onFromChange={(value) => {
+                setDatePreset("custom");
+                setFrom(value);
+              }}
+              onToChange={(value) => {
+                setDatePreset("custom");
+                setTo(value);
+              }}
+            />
+            <SelectBox
+              value={metric}
+              placeholder="Metric"
+              onValueChange={setMetric}
+              items={[
+                { value: "commits", label: "Commits" },
+                { value: "churn", label: "Churn" },
+                { value: "insertions", label: "Insertions" },
+                { value: "deletions", label: "Deletions" },
+                { value: "netLines", label: "Net lines" },
+                { value: "files", label: "Files" },
+                { value: "lines", label: "Lines" }
+              ]}
+            />
+          </div>
+            </section>
 
             <Tabs.Content
               value="annual"
@@ -1133,6 +1076,14 @@ export function Dashboard() {
             </Tabs.Content>
 
             <Tabs.Content
+              value="compare"
+              className="grid gap-4 data-[state=inactive]:hidden"
+            >
+              {selectedProjectId && <ContributorSideBySide
+                projectId={selectedProjectId} repositoryId={selectedRepoId}
+              />}
+            </Tabs.Content>
+            <Tabs.Content
               value="files"
               className="grid gap-4 data-[state=inactive]:hidden"
             >
@@ -1271,6 +1222,122 @@ export function Dashboard() {
                 emptyLabel="No pull request metadata available."
               />
               {selectedRepoId === "all" && <ProjectPager page={prPage} total={projectPullRequestsQuery.data?.total ?? 0} pageSize={200} onPage={setPrPage} />}
+            </Tabs.Content>
+
+            <Tabs.Content
+              value="settings"
+              className="grid gap-5 data-[state=inactive]:hidden"
+            >
+              <div>
+                <h2 className="text-xl font-semibold">Settings</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Manage projects, data collection, appearance, saved views and custom labels.
+                  Analytics stay in their dedicated tabs.
+                </p>
+              </div>
+              <section className="grid gap-3 rounded-md border border-border bg-panel p-4">
+                <h3 className="text-sm font-semibold">Workspace and repositories</h3>
+                <p className="text-xs text-muted-foreground">
+                  Import and refresh are explicit actions. Gita never pushes to the analyzed repositories.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+              <GitHubRepositoryPicker
+                projectId={selectedProjectId}
+                repositories={repositories}
+                onImported={() => {
+                  void queryClient.invalidateQueries({ queryKey: ["repositories", selectedProjectId] });
+                  void queryClient.invalidateQueries({ queryKey: ["summary", selectedProjectId] });
+                }}
+              />
+              <ProjectDialog
+                open={projectDialogOpen}
+                onOpenChange={setProjectDialogOpen}
+                pending={createProjectMutation.isPending}
+                error={createProjectMutation.error}
+                onSubmit={(input) => createProjectMutation.mutate(input)}
+              />
+              <RepositoryDialog
+                open={repositoryDialogOpen}
+                onOpenChange={setRepositoryDialogOpen}
+                disabled={!selectedProjectId}
+                pending={createRepositoryMutation.isPending}
+                error={createRepositoryMutation.error}
+                onSubmit={(input) => createRepositoryMutation.mutate(input)}
+              />
+              <IconButton
+                label="Delete project and local data"
+                onClick={() => setProjectDeleteOpen(true)}
+                disabled={!selectedProjectId || deleteProjectMutation.isPending}
+              >
+                <Trash2 className="h-4 w-4 text-danger" />
+              </IconButton>
+              <IconButton
+                label="Refresh project"
+                onClick={() => refreshProjectMutation.mutate()}
+                disabled={!selectedProjectId || refreshProjectMutation.isPending}
+              >
+                <RefreshCw className={iconClass(refreshProjectMutation.isPending)} />
+              </IconButton>
+              <IconButton
+                label="Refresh repository"
+                onClick={() => refreshRepositoryMutation.mutate()}
+                disabled={selectedRepoId === "all" || refreshRepositoryMutation.isPending}
+              >
+                <GitBranch className={iconClass(refreshRepositoryMutation.isPending)} />
+              </IconButton>
+                </div>
+              </section>
+              <section className="grid gap-2 rounded-md border border-border bg-panel p-4">
+                <h3 className="text-sm font-semibold">Appearance</h3>
+                <p className="text-xs text-muted-foreground">Choose light, dark or your operating system theme.</p>
+                <div className="flex"><ThemeToggle /></div>
+              </section>
+              <section className="grid gap-3 rounded-md border border-border bg-panel p-4">
+                <h3 className="text-sm font-semibold">Saved branch views and folder filters</h3>
+                <p className="text-xs text-muted-foreground">
+                  Configure how Git branches and folders are included in analytics.
+                </p>
+          <BranchViewControls
+            activeViewId={activeBranchViewId}
+            views={branchViews}
+            branchSettings={visibleBranchSettings}
+            selection={branchSelection}
+            folderFilters={folderFilters}
+            pending={
+              branchViewsQuery.isLoading ||
+              createBranchViewMutation.isPending ||
+              updateBranchViewMutation.isPending ||
+              deleteBranchViewMutation.isPending
+            }
+            error={branchViewError}
+            onViewChange={handleBranchViewChange}
+            onOpenEditor={() => setBranchEditorOpen(true)}
+            onSave={() => setBranchViewNameDialog({ mode: "save", initialName: "" })}
+            onUpdate={handleSaveActiveBranchView}
+            onDuplicate={() => {
+              const viewId = activeBranchViewIdRef.current;
+              const view = branchViews.find((item) => item.id === viewId);
+              setBranchViewNameDialog({
+                mode: "duplicate",
+                initialName: `${view?.name ?? "Custom"} copy`
+              });
+            }}
+            onRename={() => {
+              const viewId = activeBranchViewIdRef.current;
+              if (viewId !== "custom") {
+                const view = branchViews.find((item) => item.id === viewId);
+                setBranchViewNameDialog({
+                  mode: "rename",
+                  initialName: view?.name ?? "",
+                  viewId
+                });
+              }
+            }}
+            onDelete={handleDeleteActiveBranchView}
+          />
+
+              </section>
+              {selectedProjectId && <TagSettings projectId={selectedProjectId} />}
             </Tabs.Content>
           </Tabs.Root>
         )}
