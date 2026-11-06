@@ -26,6 +26,9 @@ jobs:
           set -e
           npm install --package-lock-only --ignore-scripts --no-audit --no-fund
           npm update esbuild --package-lock-only --ignore-scripts --no-audit --no-fund
+          # Re-resolve the stale nested esbuild entry using the scoped override.
+          node -e 'const fs=require("fs");const p="package-lock.json";const j=JSON.parse(fs.readFileSync(p,"utf8"));delete j.packages["node_modules/@esbuild-kit/core-utils/node_modules/esbuild"];fs.writeFileSync(p,JSON.stringify(j,null,2)+"\n")'
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
           set +e
           npm audit --json > audit-before.json
           node -e 'const f=require("fs");const a=JSON.parse(f.readFileSync("audit-before.json","utf8"));console.log("GG_AUDIT_BEFORE="+JSON.stringify({total:a.metadata?.vulnerabilities,packages:Object.entries(a.vulnerabilities||{}).map(([name,v])=>({name,severity:v.severity,range:v.range,fixAvailable:v.fixAvailable,via:v.via.map(x=>typeof x==="string"?x:{name:x.name,title:x.title,range:x.range,url:x.url})}))}))'
