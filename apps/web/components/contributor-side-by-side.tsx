@@ -4,10 +4,14 @@ import type { AnnualMonthly } from "@gita/core";
 import { tagsForTarget } from "@gita/core";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeftRight, Search, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getAnnualReport, getProjectTags } from "@/lib/api";
 import { COMPARISON_METRIC_GROUPS, formatComparisonValue, type CompareRow } from "@/lib/contributor-comparison-metrics";
 import { downloadLocalReport } from "@/lib/annual-export";
+import {
+  defaultComparisonPreferences, readComparisonPreferences,
+  storeComparisonPreferences, toggleAllMatching
+} from "@/lib/analytics-preferences";
 
 function textNumber(value: number | null | undefined, fraction = 0): string {
   if (value === null || value === undefined) return "N/A";
@@ -17,15 +21,37 @@ function textNumber(value: number | null | undefined, fraction = 0): string {
 export function ContributorSideBySide({
   projectId, repositoryId
 }: { projectId: string; repositoryId: string }) {
-  const [year, setYear] = useState(new Date().getFullYear());
-  const [selected, setSelected] = useState<string[]>([]);
-  const [tagId, setTagId] = useState("");
-  const [search, setSearch] = useState("");
+  // Radix tabs may unmount inactive panels. Keep each repository's last selections
+  // and analysis year in browser storage, with distinct selections for each year.
+  const context = projectId + "\u0000" + repositoryId;
+  const [preferences, setPreferences] = useState(() =>
+    defaultComparisonPreferences(new Date().getFullYear()));
+  const [restoredContext, setRestoredContext] = useState<string | null>(null);
+  const selectAllRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    setPreferences(readComparisonPreferences(projectId, repositoryId, new Date().getFullYear()));
+    setRestoredContext(context);
+  }, [context, projectId, repositoryId]);
+  useEffect(() => {
+    if (restoredContext !== context) return;
+    storeComparisonPreferences(projectId, repositoryId, preferences);
+  }, [context, preferences, projectId, repositoryId, restoredContext]);
+  const { year, tagId, search } = preferences;
+  const selected = restoredContext === context ? (preferences.selections[String(year)] ?? []) : [];
+  function setSelected(update: (previous: string[]) => string[]): void {
+    setPreferences(previous => ({
+      ...previous,
+      selections: {
+        ...previous.selections,
+        [String(previous.year)]: update(previous.selections[String(previous.year)] ?? [])
+      }
+    }));
+  }
   const validYear = year >= 1970 && year <= 2100 && Number.isInteger(year);
   const annual = useQuery({
     queryKey: ["annual", projectId, year, repositoryId === "all" ? undefined : repositoryId],
     queryFn: () => getAnnualReport(projectId, year, repositoryId === "all" ? undefined : repositoryId),
-    enabled: validYear
+    enabled: validYear && restoredContext === context
   });
   const tags = useQuery({
     queryKey: ["project-tags", projectId],
@@ -44,21 +70,36 @@ export function ContributorSideBySide({
       person.primaryEmail.toLowerCase().includes(search.trim().toLowerCase())
     );
   }), [data, tagId, tags.data, search]);
-  const selectable = new Set((data?.contributors ?? []).filter(person =>
+  const selectable = useMemo(() => new Set((data?.contributors ?? []).filter(person =>
     !tagId || (tags.data &&
       tagsForTarget(tags.data, "contributor", person.primaryEmail).includes(tagId))
-  ).map(person => person.primaryEmail));
-  const chosen: CompareRow[] = (data?.contributors ?? [])
-    .filter(person => selected.includes(person.primaryEmail) && selectable.has(person.primaryEmail))
-    .sort((a,b) => selected.indexOf(a.primaryEmail) - selected.indexOf(b.primaryEmail))
-    .map(person => ({ person, evidence: scoreByEmail.get(person.primaryEmail),
-      monthly: (data?.monthly ?? []).filter(month => month.email === person.primaryEmail) }));
-  const max = 4;
+  ).map(person => person.primaryEmail)), [data, tagId, tags.data]);
+  const chosen = useMemo<CompareRow[]>(() => {
+    const selectedOrder = new Map(selected.map((email,index) => [email,index]));
+    const monthly = new Map<string, AnnualMonthly[]>();
+    for (const item of data?.monthly ?? []) {
+      const rows = monthly.get(item.email) ?? [];
+      rows.push(item);
+      monthly.set(item.email, rows);
+    }
+    return (data?.contributors ?? [])
+      .filter(person => selectedOrder.has(person.primaryEmail) && selectable.has(person.primaryEmail))
+      .sort((a,b) => (selectedOrder.get(a.primaryEmail) ?? 0) - (selectedOrder.get(b.primaryEmail) ?? 0))
+      .map(person => ({ person, evidence: scoreByEmail.get(person.primaryEmail),
+        monthly: monthly.get(person.primaryEmail) ?? [] }));
+  }, [data, scoreByEmail, selected, selectable]);
 
-  function choose(email: string) {
+  const allMatching = people.length > 0 && people.every(person => selected.includes(person.primaryEmail));
+  const someMatching = people.some(person => selected.includes(person.primaryEmail));
+  useEffect(() => {
+    if (selectAllRef.current) selectAllRef.current.indeterminate = someMatching && !allMatching;
+  }, [allMatching, someMatching]);
+  function choose(email: string): void {
     setSelected(previous => previous.includes(email)
-      ? previous.filter(item => item !== email)
-      : previous.length < max ? [...previous, email] : previous);
+      ? previous.filter(item => item !== email) : [...previous, email]);
+  }
+  function selectAllMatching(): void {
+    setSelected(previous => toggleAllMatching(previous, people.map(person => person.primaryEmail)));
   }
 
   const [monthlyMetric, setMonthlyMetric] = useState<keyof AnnualMonthly>("commits");
@@ -91,14 +132,14 @@ export function ContributorSideBySide({
             <h2 className="text-xl font-semibold">Compare contributors</h2>
           </div>
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-            Choose two to four developers, then inspect their evidence scores and underlying measures
-            in parallel. Tags narrow the candidate set without changing the score calculation cohort.
+            Select any number of contributors to compare their scores and evidence side by side.
+            Tags filter available people without changing score-calculation cohorts.
           </p>
         </div>
         <label className="flex items-center gap-2 text-sm">Analysis year
           <input aria-label="Comparison year" type="number" min={1970} max={2100}
             className="h-9 w-24 rounded border border-border bg-background px-2 tabular-nums"
-            value={year} onChange={event => setYear(Number(event.target.value))} />
+            value={year} onChange={event => setPreferences(p => ({ ...p, year: Number(event.target.value) }))} />
         </label>
       </div>
       {!validYear && <p role="alert" className="text-sm text-danger">Choose a valid year.</p>}
@@ -111,7 +152,7 @@ export function ContributorSideBySide({
       <div className="grid gap-3 rounded-md border border-border bg-panel p-4 lg:grid-cols-[200px_minmax(0,1fr)_auto]">
         <label className="grid gap-1 text-xs">Filter by custom tag
           <select aria-label="Filter contributors by tag" value={tagId}
-            onChange={event => setTagId(event.target.value)}
+            onChange={event => setPreferences(p => ({ ...p, tagId: event.target.value }))}
             className="h-9 rounded border border-border bg-background px-2 text-sm">
             <option value="">All tags</option>
             {(tags.data?.items ?? []).map(tag => (
@@ -122,15 +163,21 @@ export function ContributorSideBySide({
         <label className="grid gap-1 text-xs">Find contributors
           <span className="flex h-9 items-center gap-2 rounded border border-border bg-background px-2">
             <Search className="h-4 w-4 text-muted-foreground" />
-            <input aria-label="Search contributors" value={search} onChange={event => setSearch(event.target.value)}
+            <input aria-label="Search contributors" value={search} onChange={event => setPreferences(p => ({ ...p, search: event.target.value }))}
               className="min-w-0 flex-1 bg-transparent text-sm outline-none" placeholder="Filter by name or email" />
           </span>
         </label>
-        <div className="flex items-end gap-2">
-          <span className="px-2 py-2 text-xs tabular-nums text-muted-foreground">
-            {chosen.length}/{max} selected
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="flex h-9 items-center gap-2 whitespace-nowrap text-xs">
+            <input ref={selectAllRef} type="checkbox" checked={allMatching}
+              disabled={people.length === 0} onChange={selectAllMatching}
+              aria-label="Select all matching contributors" />
+            Select all matching ({people.length})
+          </label>
+          <span role="status" className="py-2 text-xs tabular-nums text-muted-foreground">
+            {chosen.length} selected
           </span>
-          <button type="button" onClick={() => setSelected([])}
+          <button type="button" onClick={() => setSelected(() => [])}
             className="h-9 rounded border border-border px-3 text-sm hover:bg-muted">Clear</button>
         </div>
         <div className="max-h-48 overflow-y-auto rounded border border-border bg-background p-2 lg:col-span-3">
@@ -139,7 +186,7 @@ export function ContributorSideBySide({
               const checked = selected.includes(person.primaryEmail);
               return (
                 <label key={person.primaryEmail} className="flex min-w-0 items-center gap-2 rounded px-2 py-1 text-xs hover:bg-muted">
-                  <input type="checkbox" checked={checked} disabled={!checked && selected.length >= max}
+                  <input type="checkbox" checked={checked}
                     onChange={() => choose(person.primaryEmail)} />
                   <span className="min-w-0 truncate" title={person.primaryEmail}>{person.displayName}</span>
                 </label>
@@ -153,11 +200,11 @@ export function ContributorSideBySide({
       </div>
       {chosen.length < 2 ? (
         <p role="status" className="rounded border border-border bg-panel p-5 text-sm text-muted-foreground">
-          Select at least two developers to compare their contribution and technical throughput side by side.
+          Select at least two contributors. Use "Select all matching" to include everyone in the current tag and search filters.
         </p>
       ) : (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid max-h-[440px] gap-3 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-4">
             {chosen.map(item => {
               const linkedTags = (tags.data?.items ?? []).filter(tag =>
                 tags.data && tagsForTarget(tags.data,"contributor",item.person.primaryEmail).includes(tag.id));
