@@ -123,6 +123,41 @@ required for repository analysis.
 
 ## Troubleshooting
 
+### Desktop closes immediately after launch
+
+The Rust host now records bounded startup diagnostics in the Tauri per-user
+application data directory under `logs/desktop-startup.log`. On Windows, a
+native error dialog should show startup failures even when the release build
+has no console. The dialog includes the Node exit code (when available),
+recent sanitized stderr (or startup stdout) and the diagnostic log path.
+
+- On Windows, the log is under the app-specific roaming AppData directory
+  (typically `%APPDATA%\dev.gg.analytics\logs\desktop-startup.log`).
+- Look for `[stderr]`, `[startup stdout]`, `[sidecar event error]`, and
+  `[node terminated] exit code=...` entries. An early exit stops the health
+  wait; a still-running but unhealthy backend times out after 20 seconds.
+- A nonzero Node exit code or a "Cannot find module" error may indicate an
+  incomplete installer or missing/incompatible native SQLite binding.
+  An API health timeout without an exit code is a different failure class:
+  investigate listener startup, permissions and local port access.
+- Windows verbatim paths such as `\\?\C:\Program Files\...` are converted
+  to conventional paths before being passed to Node when short enough;
+  Rust's own filesystem paths are left unchanged. This is a compatibility
+  guard, not a confirmed root-cause diagnosis for every Windows startup
+  failure.
+
+The log is reset on the next launch, stores up to 64 KiB of startup output,
+and redacts the desktop session token and authorization-header lines.
+It can still contain local usernames, file paths and other application
+details; review before sharing it. Errors occurring **before** the app data
+directory can be resolved may have only the native dialog message.
+
+This change improves diagnostics across targets, but native popup display is
+currently implemented for Windows. For Linux/macOS startup failures, launch
+the executable from a terminal and inspect the same per-user log. Build and
+test on the target OS: CI's packaged Node/SQLite smoke test cannot prove an
+installed GUI launches successfully.
+
 - **Missing native binding**: run `npm ci` with Node 24 on the target
   platform, then `npm run desktop:prepare`.
 - **Git not found**: install Git and ensure it is available on PATH.
