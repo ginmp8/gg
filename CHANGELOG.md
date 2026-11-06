@@ -10,6 +10,13 @@
   CLI, GitHub discovery, network controls and optional Tauri desktop builds.
 - Consolidated changes promoted into `main` via [PR #3](https://github.com/ginmp8/gg/pull/3).
 
+### Security
+- Remediated the full npm dependency audit from 20 findings (14 moderate,
+  4 high, 2 critical) to 0 on the verified CI candidate, using Vitest
+  4.1.12, scoped transitive overrides and a regenerated lockfile.
+- Added a permanent full-scope audit gate, without changing the Next.js
+  major version or downgrading Drizzle Kit.
+
 ### Release preparation
 - Version-specific [0.3.0 release notes](releases/0.3.0.md) describe
   scope, compatibility and outstanding validation.
