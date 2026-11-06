@@ -11,6 +11,10 @@ import type {
   FileTypeAnalyticsRow,
   HotFileAnalyticsRow,
   Project,
+  ProjectTag,
+  TagsSnapshot,
+  TagTargetPage,
+  TagTargetType,
   ProjectSummary,
   ProviderState,
   PullRequest,
@@ -63,6 +67,39 @@ export interface DashboardFilters {
   metric?: string;
   limit?: number;
   offset?: number;
+}
+
+
+export function getProjectTags(projectId: string): Promise<TagsSnapshot> {
+  return apiRequest("/api/projects/" + encodeURIComponent(projectId) + "/tags");
+}
+export function createTag(projectId: string, input: { name: string; group: string }): Promise<ProjectTag> {
+  return apiRequest("/api/projects/" + encodeURIComponent(projectId) + "/tags", {
+    method: "POST", body: JSON.stringify(input)
+  });
+}
+export function updateTag(projectId: string, tagId: string, input: { name: string; group: string }): Promise<ProjectTag> {
+  return apiRequest("/api/projects/" + encodeURIComponent(projectId) + "/tags/" + encodeURIComponent(tagId), {
+    method: "PATCH", body: JSON.stringify(input)
+  });
+}
+export function deleteTag(projectId: string, tagId: string): Promise<void> {
+  return apiRequest("/api/projects/" + encodeURIComponent(projectId) + "/tags/" + encodeURIComponent(tagId), {
+    method: "DELETE"
+  });
+}
+export function getTagTargets(projectId: string, type: TagTargetType, search = ""): Promise<TagTargetPage> {
+  return apiRequest("/api/projects/" + encodeURIComponent(projectId) +
+    "/tag-targets?" + new URLSearchParams({ type, search }).toString());
+}
+export function setTagAssignment(
+  projectId: string, tagId: string, targetType: TagTargetType, targetKey: string, enabled: boolean
+): Promise<void> {
+  return apiRequest("/api/projects/" + encodeURIComponent(projectId) + "/tags/" +
+    encodeURIComponent(tagId) + "/assignments", {
+    method: enabled ? "POST" : "DELETE",
+    body: JSON.stringify({ targetType, targetKey })
+  });
 }
 
 export async function getProjects(): Promise<ListResponse<Project>> {

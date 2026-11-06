@@ -37,7 +37,6 @@ import type {
   ContributorLeaderboardRow,
   FileTypeAnalyticsRow,
   HotFileAnalyticsRow,
-  PullRequest,
   ProjectBranch,
   ProjectPullRequest,
   Project,

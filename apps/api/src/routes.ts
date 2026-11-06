@@ -255,8 +255,8 @@ export function registerRoutes(server: FastifyInstance, database: GitaDatabase):
 
   // Project-scoped, fully user-defined tags with explicit entity assignment.
   const tagInput = z.object({
-    name: z.string().trim().min(1).max(80).refine(s => !/[\x00-\x1f\x7f]/.test(s)),
-    group: z.string().trim().max(48).refine(s => !/[\x00-\x1f\x7f]/.test(s)).default("")
+    name: z.string().trim().min(1).max(80).refine(s => Array.from(s).every(ch => ch.charCodeAt(0) > 31 && ch.charCodeAt(0) !== 127)),
+    group: z.string().trim().max(48).refine(s => Array.from(s).every(ch => ch.charCodeAt(0) > 31 && ch.charCodeAt(0) !== 127)).default("")
   });
   const tagParams = z.object({ projectId: z.string().min(1), tagId: z.string().uuid() });
   const assignmentInput = z.object({
