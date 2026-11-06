@@ -2,10 +2,11 @@
 
 import type { AnnualMonthly, Repository } from "@gg/core";
 import { tagsForTarget } from "@gg/core";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeftRight, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getAnnualReport, getProjectTags, indexAnnualProject } from "@/lib/api";
+import { getAnnualReport, getProjectTags } from "@/lib/api";
+import { ContributorRanking } from "@/components/contributor-ranking";
 import { COMPARISON_METRIC_GROUPS, formatComparisonValue, type CompareRow } from "@/lib/contributor-comparison-metrics";
 import { downloadLocalReport } from "@/lib/annual-export";
 import {
@@ -19,13 +20,12 @@ function textNumber(value: number | null | undefined, fraction = 0): string {
 }
 
 export function ContributorSideBySide({
-  projectId, repositoryId, repositories, onRepositoryChange, onRunStarted
+  projectId, repositoryId, repositories, onRepositoryChange
 }: {
   projectId: string;
   repositoryId: string;
   repositories: Repository[];
   onRepositoryChange: (repositoryId: string) => void;
-  onRunStarted: (runId: string) => void;
 }) {
   // Radix tabs may unmount inactive panels. Keep each repository's last selections
   // and analysis year in browser storage, with distinct selections for each year.
@@ -34,6 +34,7 @@ export function ContributorSideBySide({
     defaultComparisonPreferences(new Date().getFullYear()));
   const [restoredContext, setRestoredContext] = useState<string | null>(null);
   const selectAllRef = useRef<HTMLInputElement>(null);
+  const [viewMode, setViewMode] = useState<"executive" | "detailed">("executive");
   useEffect(() => {
     setPreferences(readComparisonPreferences(projectId, repositoryId, new Date().getFullYear()));
     setRestoredContext(context);
@@ -62,12 +63,6 @@ export function ContributorSideBySide({
   const tags = useQuery({
     queryKey: ["project-tags", projectId],
     queryFn: () => getProjectTags(projectId)
-  });
-  const indexMutation = useMutation({
-    mutationFn: () => indexAnnualProject(projectId),
-    onSuccess(run) {
-      onRunStarted(run.id);
-    }
   });
   const data = annual.data;
   const incompleteRepositories = data?.coverage.filter(item => !item.complete) ?? [];
@@ -104,6 +99,7 @@ export function ContributorSideBySide({
   }, [data, scoreByEmail, selected, selectable]);
 
   const selectedEmails = useMemo(() => new Set(selected), [selected]);
+  const visibleEmails = useMemo(() => new Set(people.map(person => person.primaryEmail)), [people]);
   const allMatching = people.length > 0 && people.every(person => selectedEmails.has(person.primaryEmail));
   const someMatching = people.some(person => selectedEmails.has(person.primaryEmail));
   useEffect(() => {
@@ -147,8 +143,8 @@ export function ContributorSideBySide({
             <h2 className="text-xl font-semibold">Compare contributors</h2>
           </div>
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-            Select any number of contributors to compare their scores and evidence side by side.
-            Tags filter available people without changing score-calculation cohorts.
+            Understand overall and per-metric rankings at a glance, or switch to detailed
+            evidence for the full side-by-side analysis. Rankings remain cohort-relative.
           </p>
         </div>
         <div className="flex flex-wrap items-end gap-3">
@@ -173,10 +169,6 @@ export function ContributorSideBySide({
       {annual.isError && <p role="alert" className="text-sm text-danger">{annual.error.message}</p>}
       {tags.isError && <p role="alert" className="text-sm text-danger">{tags.error.message}</p>}
       {annual.isLoading && <p role="status" className="text-sm text-muted-foreground">Loading local annual metrics…</p>}
-      {indexMutation.isError && <p role="alert" className="text-sm text-danger">{indexMutation.error.message}</p>}
-      {indexMutation.isSuccess && <p role="status" className="text-sm text-muted-foreground">
-        Local indexing has started. Progress appears in the dashboard header.
-      </p>}
       {data && <p role="status" className="text-sm text-muted-foreground">
         {data.contributors.length} contributors with commits in {year} across {data.coverage.length} selected
         {data.coverage.length === 1 ? " repository" : " repositories"}.
@@ -190,18 +182,27 @@ export function ContributorSideBySide({
             Other repositories may already have contributors available, but missing history
             is not counted as zero.
           </p>
-          <div className="flex flex-wrap items-center gap-3">
-            <button type="button" disabled={indexMutation.isPending}
-              onClick={() => indexMutation.mutate()}
-              className="rounded border border-border bg-panel px-3 py-2 text-sm hover:bg-muted disabled:opacity-50">
-              {indexMutation.isPending ? "Starting indexing…" : "Index local history"}
-            </button>
-            <span className="text-xs text-muted-foreground">
-              Uses cached Git mirrors only; refresh the project first if a mirror is missing.
-            </span>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            Open Settings → Data synchronization to index cached history, or fetch
+            missing repositories before comparing contributors.
+          </p>
         </div>
       )}
+      <div role="group" aria-label="Comparison view" className="inline-flex w-fit gap-1 rounded-lg border border-border bg-muted p-1 text-sm">
+        <button type="button" aria-pressed={viewMode === "executive"} onClick={() => setViewMode("executive")}
+          className={"rounded-md px-4 py-2 " + (viewMode === "executive" ? "bg-panel font-semibold text-foreground" : "text-muted-foreground hover:text-foreground")}>
+          Executive ranking
+        </button>
+        <button type="button" aria-pressed={viewMode === "detailed"} onClick={() => setViewMode("detailed")}
+          className={"rounded-md px-4 py-2 " + (viewMode === "detailed" ? "bg-panel font-semibold text-foreground" : "text-muted-foreground hover:text-foreground")}>
+          Detailed evidence
+        </button>
+      </div>
+      {viewMode === "executive" && data && (
+        <ContributorRanking report={data} visibleEmails={visibleEmails}
+          selectedEmails={selectedEmails} onToggle={choose} />
+      )}
+      {viewMode === "detailed" && <>
       <div className="grid gap-3 rounded-md border border-border bg-panel p-4 lg:grid-cols-[200px_minmax(0,1fr)_auto]">
         <label className="grid gap-1 text-xs">Filter by custom tag
           <select aria-label="Filter contributors by tag" value={tagId}
@@ -412,6 +413,7 @@ export function ContributorSideBySide({
           </p>
         </>
       )}
+      </>}
     </section>
   );
 }
