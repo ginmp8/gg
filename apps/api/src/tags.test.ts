@@ -135,4 +135,42 @@ describe("project-scoped flexible tagging and multi-repo inventories", () => {
       await server.close();db.sqlite.close();fs.rmSync(root,{recursive:true,force:true});
     }
   });
+  it("applies multiple assignments atomically and rejects any foreign target without partial writes", async () => {
+    const root=fs.mkdtempSync(path.join(os.tmpdir(),"gita-tag-bulk-"));
+    const db=openGitaDatabase(root);
+    const server=await buildServer(db);
+    try {
+      const p=await createProject(db,{name:"Local project"});
+      const other=await createProject(db,{name:"Foreign project"});
+      const add=async (projectId:string,name:string) => createRepositoryRecord(db,projectId,{
+        name,provider:"local",fetchUrl:"/tmp/"+name,localPath:"/tmp/"+name,githubOwnerRepo:null
+      });
+      const first=await add(p.id,"first");
+      const second=await add(p.id,"second");
+      const foreign=await add(other.id,"foreign");
+      const tagResponse=await server.inject({method:"POST",url:"/api/projects/"+p.id+"/tags",
+        payload:{name:"Any tag",group:"Custom"}});
+      const tag=tagResponse.json();
+      const url="/api/projects/"+p.id+"/tags/"+tag.id+"/assignments/bulk";
+      const invalid=await server.inject({method:"POST",url,
+        payload:{targetType:"repository",targetKeys:[first.id,foreign.id,second.id]}});
+      expect(invalid.statusCode,invalid.body).toBe(422);
+      expect(listProjectTags(db,p.id).assignments).toHaveLength(0);
+      const valid=await server.inject({method:"POST",url,
+        payload:{targetType:"repository",targetKeys:[first.id,second.id,first.id]}});
+      expect(valid.statusCode,valid.body).toBe(200);
+      expect(valid.json()).toMatchObject({assigned:2});
+      expect(listProjectTags(db,p.id).assignments).toHaveLength(2);
+      const repeated=await server.inject({method:"POST",url,
+        payload:{targetType:"repository",targetKeys:[first.id,second.id]}});
+      expect(repeated.statusCode).toBe(200);
+      expect(listProjectTags(db,p.id).assignments).toHaveLength(2);
+      const empty=await server.inject({method:"POST",url,
+        payload:{targetType:"repository",targetKeys:[]}});
+      expect(empty.statusCode).toBe(400);
+    } finally {
+      await server.close();db.sqlite.close();fs.rmSync(root,{recursive:true,force:true});
+    }
+  });
+
 });

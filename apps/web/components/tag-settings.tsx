@@ -1,11 +1,11 @@
 "use client";
 
-import type { ProjectTag, TagTargetType } from "@gita/core";
+import type { ProjectTag, TagTarget, TagTargetType } from "@gita/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Pencil, Plus, Tag, Trash2 } from "lucide-react";
-import { useDeferredValue, useState } from "react";
+import { Check, ChevronDown, Pencil, Plus, Search, Tag, Trash2, X } from "lucide-react";
+import { useDeferredValue, useEffect, useRef, useState } from "react";
 import {
-  createTag, deleteTag, getProjectTags, getTagTargets, setTagAssignment, updateTag
+  createTag, deleteTag, getProjectTags, getTagTargets, setTagAssignment, setTagAssignmentsBulk, updateTag
 } from "@/lib/api";
 
 const types: Array<{ value: TagTargetType; label: string }> = [
@@ -27,7 +27,7 @@ export function TagSettings({ projectId }: { projectId: string }) {
   const [selectedId, setSelectedId] = useState("");
   const [targetType, setTargetType] = useState<TagTargetType>("contributor");
   const [search, setSearch] = useState("");
-  const [targetKey, setTargetKey] = useState("");
+  const [selectedTargets, setSelectedTargets] = useState<TagTarget[]>([]);
   const deferredSearch = useDeferredValue(search);
   const tags = useQuery({
     queryKey: ["project-tags", projectId], queryFn: () => getProjectTags(projectId)
@@ -39,7 +39,7 @@ export function TagSettings({ projectId }: { projectId: string }) {
   const refresh = () => { void client.invalidateQueries({ queryKey: ["project-tags", projectId] }); };
   const create = useMutation({
     mutationFn: (value: { name: string; group: string }) => createTag(projectId, value),
-    onSuccess: tag => { setName(""); setGroup(""); setSelectedId(tag.id); refresh(); }
+    onSuccess: tag => { setName(""); setGroup(""); setSelectedId(tag.id); setSelectedTargets([]); refresh(); }
   });
   const edit = useMutation({
     mutationFn: (value: { id: string; name: string; group: string }) => updateTag(projectId, value.id, value),
@@ -47,21 +47,26 @@ export function TagSettings({ projectId }: { projectId: string }) {
   });
   const remove = useMutation({
     mutationFn: (id: string) => deleteTag(projectId, id),
-    onSuccess: () => { setSelectedId(""); refresh(); }
+    onSuccess: () => { setSelectedId(""); setSelectedTargets([]); refresh(); }
   });
   const assignment = useMutation({
     mutationFn: (value: { tagId: string; type: TagTargetType; key: string; enabled: boolean }) =>
       setTagAssignment(projectId, value.tagId, value.type, value.key, value.enabled),
     onSuccess: refresh
   });
+  const bulkAssignment = useMutation({
+    mutationFn: (value: { tagId: string; type: TagTargetType; keys: string[] }) =>
+      setTagAssignmentsBulk(projectId, value.tagId, value.type, value.keys),
+    onSuccess: () => { setSelectedTargets([]); refresh(); }
+  });
 
   const items = tags.data?.items ?? [];
   const chosen = items.find(tag => tag.id === selectedId) ?? items[0] ?? null;
   const assigned = chosen ? (tags.data?.assignments ?? []).filter(a => a.tagId === chosen.id) : [];
   const candidates = targets.data?.items ?? [];
-  const activeTarget = candidates.some(t => t.key === targetKey) ? targetKey : "";
-  const pending = create.isPending || edit.isPending || remove.isPending || assignment.isPending;
-  const error = tags.error ?? targets.error ?? create.error ?? edit.error ?? remove.error ?? assignment.error;
+
+  const pending = create.isPending || edit.isPending || remove.isPending || assignment.isPending || bulkAssignment.isPending;
+  const error = tags.error ?? targets.error ?? create.error ?? edit.error ?? remove.error ?? assignment.error ?? bulkAssignment.error;
 
   return (
     <section aria-label="Custom tag settings" className="grid gap-4 rounded-md border border-border bg-panel p-4">
@@ -105,7 +110,7 @@ export function TagSettings({ projectId }: { projectId: string }) {
             {items.map(tag => (
               <div key={tag.id} className={"flex items-center gap-2 border-b border-border/60 px-3 py-2 " +
                 (chosen?.id === tag.id ? "bg-muted/80" : "")}>
-                <button type="button" onClick={() => setSelectedId(tag.id)}
+                <button type="button" onClick={() => { setSelectedId(tag.id); setSelectedTargets([]); setSearch(""); }}
                   aria-pressed={chosen?.id === tag.id} title={tagLabel(tag)}
                   className="min-w-0 flex-1 truncate text-left text-sm font-medium hover:text-accent">
                   {tagLabel(tag)}
@@ -132,32 +137,30 @@ export function TagSettings({ projectId }: { projectId: string }) {
           <label className="grid gap-1 text-xs">Entity type
             <select value={targetType} onChange={event => {
               setTargetType(event.target.value as TagTargetType);
-              setTargetKey(""); setSearch("");
+              setSelectedTargets([]); setSearch("");
             }} className="h-9 rounded border border-border bg-background px-2 text-sm">
               {types.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </label>
-          <label className="grid gap-1 text-xs">Search targets
-            <input value={search} maxLength={100} onChange={event => { setSearch(event.target.value); setTargetKey(""); }}
-              placeholder="Name, email or identifier" className="h-9 rounded border border-border bg-background px-2 text-sm" />
-          </label>
-          <label className="grid gap-1 text-xs">Target
-            <select value={activeTarget} onChange={event => setTargetKey(event.target.value)}
-              className="h-9 w-full min-w-0 rounded border border-border bg-background px-2 text-sm">
-              <option value="">Choose a target</option>
-              {candidates.map(t => <option key={t.key} value={t.key}>{t.label} · {t.detail}</option>)}
-            </select>
-          </label>
-          <p className="text-[11px] text-muted-foreground">
-            {candidates.length} of {targets.data?.total ?? 0} matches; refine the search if needed.
-          </p>
-          <button type="button" disabled={!chosen || !activeTarget || pending}
+          <TargetMultiSelect
+            selected={selectedTargets}
+            onChange={setSelectedTargets}
+            options={candidates}
+            search={search}
+            onSearch={setSearch}
+            loading={targets.isFetching}
+            total={targets.data?.total ?? 0}
+            disabled={!chosen || pending}
+          />
+          <button type="button" disabled={!chosen || selectedTargets.length === 0 || pending}
             onClick={() => {
-              if (chosen && activeTarget) assignment.mutate({
-                tagId: chosen.id, type: targetType, key: activeTarget, enabled: true
+              if (chosen && selectedTargets.length) bulkAssignment.mutate({
+                tagId: chosen.id, type: targetType,
+                keys: selectedTargets.map(target => target.key)
               });
             }} className="h-9 rounded bg-foreground px-3 text-sm text-background disabled:opacity-50">
-            Assign tag
+            {bulkAssignment.isPending ? "Assigning…" : "Assign " +
+              selectedTargets.length + " selected target" + (selectedTargets.length === 1 ? "" : "s")}
           </button>
           <h5 className="border-t border-border pt-3 text-xs font-semibold">Assigned entities ({assigned.length})</h5>
           <div className="max-h-52 overflow-y-auto">
@@ -175,5 +178,106 @@ export function TagSettings({ projectId }: { projectId: string }) {
         </div>
       </div>
     </section>
+  );
+}
+
+/** Search and multi-select in the same control; selections persist across searches. */
+function TargetMultiSelect({
+  selected, onChange, options, search, onSearch, loading, total, disabled
+}: {
+  selected: TagTarget[];
+  onChange: (next: TagTarget[]) => void;
+  options: TagTarget[];
+  search: string;
+  onSearch: (value: string) => void;
+  loading: boolean;
+  total: number;
+  disabled: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  const input = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onOutside = (event: MouseEvent) => {
+      if (!root.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onOutside);
+    document.addEventListener("keydown", onEscape);
+    input.current?.focus();
+    return () => {
+      document.removeEventListener("mousedown", onOutside);
+      document.removeEventListener("keydown", onEscape);
+    };
+  }, [open]);
+  const keys = new Set(selected.map(item => item.key));
+  function toggle(item: TagTarget) {
+    onChange(keys.has(item.key)
+      ? selected.filter(target => target.key !== item.key)
+      : selected.length < 100 ? [...selected, item] : selected);
+  }
+  return (
+    <div ref={root} className="relative grid min-w-0 gap-1 text-xs">
+      <span>Choose targets</span>
+      <button type="button" disabled={disabled} aria-expanded={open}
+        aria-controls="gita-target-options" aria-haspopup="true"
+        onClick={() => setOpen(previous => !previous)}
+        className="flex h-10 w-full items-center justify-between gap-2 rounded border border-border bg-background px-3 text-left text-sm hover:bg-muted disabled:opacity-60">
+        <span className={selected.length ? "font-medium" : "text-muted-foreground"}>
+          {selected.length ? selected.length + " targets selected" : "Search and select multiple targets"}
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0" aria-hidden />
+      </button>
+      {open && !disabled && (
+        <div id="gita-target-options" className="absolute left-0 right-0 top-14 z-30 overflow-hidden rounded-md border border-border bg-panel shadow-xl">
+          <div className="flex items-center gap-2 border-b border-border px-3">
+            <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+            <input ref={input} value={search} maxLength={100}
+              aria-label="Search targets inside multi-select"
+              onChange={event => onSearch(event.target.value)}
+              placeholder="Search by name, email or identifier…"
+              className="h-11 min-w-0 flex-1 bg-transparent text-sm outline-none" />
+          </div>
+          <div role="group" aria-label="Available tag targets" className="max-h-56 overflow-y-auto p-1">
+            {options.map(item => (
+              <label key={item.key} className="flex cursor-pointer items-center gap-3 rounded px-3 py-2 hover:bg-muted">
+                <input type="checkbox" checked={keys.has(item.key)}
+                  disabled={selected.length >= 100 && !keys.has(item.key)}
+                  onChange={() => toggle(item)} aria-label={"Select " + item.label} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-medium" title={item.label}>{item.label}</span>
+                  <span className="block truncate text-[11px] text-muted-foreground" title={item.detail}>{item.detail}</span>
+                </span>
+                {keys.has(item.key) && <Check className="h-4 w-4 text-accent" aria-hidden />}
+              </label>
+            ))}
+            {loading && <p role="status" className="p-3 text-xs text-muted-foreground">Searching targets…</p>}
+            {!loading && options.length === 0 && (
+              <p className="p-3 text-xs text-muted-foreground">No matches. Try another name or email.</p>
+            )}
+          </div>
+          <div className="flex items-center justify-between gap-2 border-t border-border p-2 text-xs text-muted-foreground">
+            <span>{options.length} of {total} matches · {selected.length}/100 selected</span>
+            <button type="button" onClick={() => setOpen(false)}
+              className="rounded border border-border px-3 py-1 text-foreground hover:bg-muted">Done</button>
+          </div>
+        </div>
+      )}
+      {selected.length > 0 && (
+        <div aria-label="Selected targets" className="mt-1 flex flex-wrap gap-1.5">
+          {selected.map(item => (
+            <span key={item.key} className="inline-flex max-w-full items-center gap-1 rounded border border-border bg-muted px-2 py-1 text-xs">
+              <span className="max-w-56 truncate" title={item.label}>{item.label}</span>
+              <button type="button" onClick={() => toggle(item)} disabled={disabled}
+                aria-label={"Remove " + item.label}
+                className="rounded p-0.5 hover:bg-panel"><X className="h-3.5 w-3.5" /></button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

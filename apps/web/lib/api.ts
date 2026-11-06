@@ -92,6 +92,16 @@ export function getTagTargets(projectId: string, type: TagTargetType, search = "
   return apiRequest("/api/projects/" + encodeURIComponent(projectId) +
     "/tag-targets?" + new URLSearchParams({ type, search }).toString());
 }
+
+export function setTagAssignmentsBulk(
+  projectId: string, tagId: string, targetType: TagTargetType, targetKeys: string[]
+): Promise<{ assigned: number }> {
+  return apiRequest("/api/projects/" + encodeURIComponent(projectId) + "/tags/" +
+    encodeURIComponent(tagId) + "/assignments/bulk", {
+      method: "POST", body: JSON.stringify({ targetType, targetKeys })
+    });
+}
+
 export function setTagAssignment(
   projectId: string, tagId: string, targetType: TagTargetType, targetKey: string, enabled: boolean
 ): Promise<void> {

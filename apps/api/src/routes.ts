@@ -316,6 +316,32 @@ export function registerRoutes(server: FastifyInstance, database: GitaDatabase):
       throw error;
     }
   });
+
+  // Atomic batch assignment: if any target is stale/foreign, none of the selected targets is written.
+  server.post("/api/projects/:projectId/tags/:tagId/assignments/bulk", async (request, reply) => {
+    const { projectId, tagId } = tagParams.parse(request.params);
+    if (!await getProject(database, projectId)) return reply.status(404).send({ error: "not_found" });
+    const body = z.object({
+      targetType: z.enum(["contributor", "repository", "branch", "pull_request"]),
+      targetKeys: z.array(z.string().trim().min(1).max(500)).min(1).max(100)
+    }).parse(request.body);
+    const keys = [...new Set(body.targetKeys)];
+    try {
+      const done = database.sqlite.transaction(() => {
+        for (const key of keys) {
+          if (!setProjectTagAssignment(database, projectId, tagId, body.targetType, key, true)) return false;
+        }
+        return true;
+      })();
+      return done ? { assigned: keys.length } : reply.status(404).send({ error: "not_found" });
+    } catch (error) {
+      if (error instanceof TagTargetNotFound) {
+        return reply.status(422).send({ error: "invalid_tag_target", message: error.message });
+      }
+      throw error;
+    }
+  });
+
   server.delete("/api/projects/:projectId/tags/:tagId/assignments", async (request,reply) => {
     const {projectId,tagId}=tagParams.parse(request.params);
     if (!await getProject(database,projectId)) return reply.status(404).send({error:"not_found"});
