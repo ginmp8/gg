@@ -141,4 +141,73 @@ describe("explicit project refresh network consent", () => {
       fs.rmSync(root, { recursive: true, force: true });
     }
   }, 25_000);
+
+  it("separates Git-only, local index, and combined sync without stale annual coverage", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gg-sync-modes-"));
+    vi.stubEnv("GG_OFFLINE", "0");
+    vi.stubEnv("GG_ALLOW_GITHUB_METADATA", "0");
+    const database = openGGDatabase(root);
+    const server = await buildServer(database);
+    try {
+      const project = await createProject(database, { name: "Sync modes fixture" });
+      const source = createSource(root, "sync-source");
+      await createRepositoryRecord(database, project.id, {
+        fetchUrl: pathToFileURL(source).href, name: "source", provider: "unknown",
+        localPath: null, githubOwnerRepo: null
+      });
+
+      async function run(endpoint: string, body?: object): Promise<void> {
+        const response = await server.inject({
+          method: "POST", url: endpoint, payload: body ?? {}
+        });
+        expect(response.statusCode).toBe(202);
+        const runId = response.json().id as string;
+        const deadline = Date.now() + 12_000;
+        while (Date.now() < deadline) {
+          const status = await getRefreshRun(database, runId);
+          if (status?.status === "failed" || status?.status === "succeeded") {
+            expect(status.status, status.errorMessage ?? undefined).toBe("succeeded");
+            return;
+          }
+          await sleep(25);
+        }
+        throw new Error("Synchronization did not finish");
+      }
+      async function annual(): Promise<{ complete: boolean; totals: { commits: number } }> {
+        const response = await server.inject({
+          method: "GET", url: `/api/projects/${project.id}/annual?year=2026`
+        });
+        expect(response.statusCode).toBe(200);
+        return response.json() as { complete: boolean; totals: { commits: number } };
+      }
+
+      await run(`/api/projects/${project.id}/refresh`, { indexAnnual: false });
+      expect(await annual()).toMatchObject({ complete: false, totals: { commits: 0 } });
+
+      await run(`/api/projects/${project.id}/annual/reindex`);
+      expect(await annual()).toMatchObject({ complete: true, totals: { commits: 1 } });
+
+      fs.writeFileSync(path.join(source, "new.ts"), "export const value = 2;\n");
+      execFileSync("git", ["-C", source, "add", "new.ts"], { stdio: "ignore" });
+      execFileSync("git", [
+        "-C", source, "-c", "user.name=Fixture",
+        "-c", "user.email=sync-source@example.test", "commit", "-m", "follow-up"
+      ], {
+        stdio: "ignore",
+        env: { ...process.env, GIT_AUTHOR_DATE: "2026-03-01T10:00:00+00:00",
+          GIT_COMMITTER_DATE: "2026-03-01T10:00:00+00:00" }
+      });
+
+      await run(`/api/projects/${project.id}/refresh`, { indexAnnual: false });
+      // Old cached metrics remain inspectable but cannot claim complete coverage.
+      expect(await annual()).toMatchObject({ complete: false, totals: { commits: 1 } });
+
+      await run(`/api/projects/${project.id}/refresh`, { indexAnnual: true });
+      expect(await annual()).toMatchObject({ complete: true, totals: { commits: 2 } });
+    } finally {
+      await server.close();
+      database.sqlite.close();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }, 25_000);
 });
