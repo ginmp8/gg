@@ -119,6 +119,27 @@ The application refuses deletion while a refresh is running or if a mirror
 path fails the safety checks. Local deletion is irreversible; back up data
 you want to keep.
 
+## Local CLI for agent harnesses
+
+Gita exposes its cached analytics through a local **read-only JSON CLI**
+for any trusted coding harness able to execute a subprocess. It does not
+require an HTTP API server, authentication, network access or a separate
+MCP installation.
+
+    npm run cli -- catalog
+    npm run cli -- projects
+    npm run cli -- scores --project PROJECT_ID --year 2026
+    npm run cli -- annual --project PROJECT_ID --year 2026
+    npm run cli -- table --table annual_file_changes --limit 100
+
+The CLI includes project summaries, full annual scores and score components,
+contributor and repository analytics, branch/PR inventories, tags, and
+paginated raw Git/SQLite records. See
+[CLI documentation](docs/features/local-cli.md) or **Settings** for
+the current project command examples and database directory. A Gita source
+checkout with Node.js 24 and npm ci is required; the native desktop
+installer does not bundle this CLI.
+
 ## Quick start
 
 ### Requirements

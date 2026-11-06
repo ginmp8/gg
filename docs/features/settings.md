@@ -11,6 +11,8 @@ The dedicated **Settings** tab holds:
 - Saved branch views and folder filters
 - User-defined custom tags and their assignments
 - Manual Git author identity links and on-demand GitHub PR/review snapshot synchronization
+- Local read-only agent CLI: sample commands, active database path, and
+  GITA_DATA_DIR override guidance
 
 The first-run empty-project screen retains Create project for onboarding.
 **Compare** keeps selection and tag filters next to its side-by-side
