@@ -51,3 +51,9 @@ jobs:
       # so a pre-existing dependency advisory never conceals test failures.
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
+
+      - name: Audit all dependencies including development tooling
+        run: npm audit --audit-level=moderate
+
+      - name: Smoke-test Drizzle Kit CLI after nested esbuild override
+        run: npm --workspace @gg/db exec -- drizzle-kit --version
