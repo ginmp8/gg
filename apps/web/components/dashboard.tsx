@@ -47,6 +47,7 @@ import type {
 
 import { ActivityChart } from "@/components/activity-chart";
 import { AnnualAnalytics } from "@/components/annual-analytics";
+import { BranchComparisonPanel } from "@/components/branch-comparison";
 import {
   ContributorComparisonChart,
   ContributorFileTypeShareChart
@@ -1195,6 +1196,10 @@ export function Dashboard() {
                 columns={branchColumns}
                 data={branches}
                 emptyLabel="No branch data available."
+              />
+              <BranchComparisonPanel
+                repositoryId={selectedRepoId === "all" ? null : selectedRepoId}
+                branches={branches}
               />
             </Tabs.Content>
 

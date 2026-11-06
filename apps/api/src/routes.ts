@@ -49,7 +49,7 @@ import {
   updateRepositoryRecord,
   type GitaDatabase
 } from "@gita/db";
-import { isGitHubMetadataAllowed, resolveRepositoryInput } from "@gita/git-engine";
+import { compareLocalBranches, isGitHubMetadataAllowed, resolveRepositoryInput } from "@gita/git-engine";
 import { createGitHubAdapter } from "@gita/github-adapter";
 
 import { enqueueProjectRefresh, enqueueRepositoryRefresh } from "./refresh";
@@ -399,6 +399,25 @@ export function registerRoutes(server: FastifyInstance, database: GitaDatabase):
       return reply.status(404).send({ error: "not_found" });
     }
     return { items: await getContributorFileTypes(database, project.id, filters) };
+  });
+
+  server.get("/api/repositories/:repoId/compare", async (request, reply) => {
+    const { repoId } = idParamsSchema.parse(request.params);
+    const query = z.object({
+      base: z.string().min(1).max(200),
+      head: z.string().min(1).max(200),
+      limit: z.coerce.number().int().min(1).max(500).default(500)
+    }).parse(request.query);
+    const repository = await getRepository(database, requireId(repoId));
+    if (!repository) return reply.status(404).send({ error: "not_found" });
+    try {
+      return await compareLocalBranches(repository.cachePath, query.base, query.head, query.limit);
+    } catch {
+      return reply.status(422).send({
+        error: "comparison_unavailable",
+        message: "Both branches must exist in the local Git mirror. Refresh the repository first."
+      });
+    }
   });
 
   server.get("/api/repositories/:repoId/summary", async (request, reply) => {

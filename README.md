@@ -55,6 +55,8 @@ technologies and parts of a project that absorb the most work.
 - Commits, insertions, deletions, net line change, and churn over time
 - Contributor leaderboards, activity trends, and focus areas
 - Repository comparisons, branch activity, hot files, and file-type insights
+- Read-only three-dot branch comparisons (ahead/behind and changed files) from
+  cached Git mirrors, with a 500-file display limit and truncation notice
 - Reusable branch views with per-repository folder filters
 - GitHub pull requests and branch metadata through the optional `gh` CLI
 - Composable filters for repository, contributor, branch, folder, date, and

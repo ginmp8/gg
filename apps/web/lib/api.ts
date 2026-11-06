@@ -5,6 +5,7 @@ import type {
   Branch,
   BranchView,
   BranchScope,
+  BranchComparison,
   ContributorFileTypeRow,
   ContributorLeaderboardRow,
   FileTypeAnalyticsRow,
@@ -249,6 +250,15 @@ export async function getBranches(
   repoId: string
 ): Promise<ListResponse<Branch> & { branchTimeSource: string }> {
   return apiRequest(`/api/repositories/${repoId}/branches?limit=100`);
+}
+
+export async function getBranchComparison(
+  repoId: string, base: string, head: string, limit = 500
+): Promise<BranchComparison> {
+  const params = new URLSearchParams({
+    base, head, limit: String(limit)
+  });
+  return apiRequest(`/api/repositories/${repoId}/compare?${params}`);
 }
 
 export async function getPullRequests(repoId: string): Promise<PullRequestResponse> {
