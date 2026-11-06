@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -24,6 +25,63 @@ describe("repository analysis", () => {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
   });
+  it("allows an explicitly requested remote refresh and uses the registered source on repeat fetch", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gita-remote-consent-"));
+    const sourcePath = path.join(tmpDir, "source.git");
+    const cachePath = path.join(tmpDir, "mirror.git");
+    const params = {
+      fetchUrl: pathToFileURL(sourcePath).href,
+      cachePath,
+      reposRoot: tmpDir
+    };
+    try {
+      git(["init", "--bare", sourcePath]);
+      await expect(ensureMirrorRepository(params)).rejects.toThrow(/Remote Git access is disabled/);
+      expect(fs.existsSync(cachePath)).toBe(false);
+
+      const first = await ensureMirrorRepository({ ...params, userInitiated: true });
+      expect(first.operation).toBe("clone");
+
+      // A modified cache must never redirect a user-authorized refresh to a
+      // different network endpoint; the registered URL takes precedence.
+      const foreignOrigin = "https://untrusted.example/other.git";
+      git(["-C", cachePath, "remote", "set-url", "origin", foreignOrigin]);
+      const repeated = await ensureMirrorRepository({ ...params, userInitiated: true });
+      expect(repeated.operation).toBe("fetch");
+      expect(
+        execFileSync("git", ["-C", cachePath, "remote", "get-url", "origin"], { encoding: "utf8" }).trim()
+      ).toBe(foreignOrigin);
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
+  it("the explicit offline switch blocks even a requested remote refresh", async () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gita-forced-offline-"));
+    try {
+      vi.stubEnv("GITA_OFFLINE", "1");
+      const cachePath = path.join(tmpDir, "mirror.git");
+      await expect(ensureMirrorRepository({
+        fetchUrl: "https://example.invalid/private.git",
+        cachePath,
+        reposRoot: tmpDir,
+        userInitiated: true
+      })).rejects.toThrow(/Remote Git access is disabled/);
+      expect(fs.existsSync(cachePath)).toBe(false);
+
+      vi.stubEnv("GITA_OFFLINE", "0");
+      vi.stubEnv("GITA_ALLOW_REMOTE_GIT", "0");
+      await expect(ensureMirrorRepository({
+        fetchUrl: "https://example.invalid/private.git",
+        cachePath,
+        reposRoot: tmpDir,
+        userInitiated: true
+      })).rejects.toThrow(/Remote Git access is disabled/);
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+
   it("rejects embedded HTTPS credentials unless deliberately enabled", () => {
     const previous = process.env.GITA_ALLOW_URL_CREDENTIALS;
     delete process.env.GITA_ALLOW_URL_CREDENTIALS;

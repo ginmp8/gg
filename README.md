@@ -104,9 +104,9 @@ gh auth status
 ```
 
 Core Git analytics continue to work when `gh` is missing, unauthenticated, or
-temporarily unavailable. GitHub metadata and remote Git access are also
-disabled by default; see [Network and privacy](docs/NETWORK-PRIVACY.md)
-for explicit opt-in settings.
+temporarily unavailable. Remote clone/fetch occurs only when you explicitly
+select **Refresh** for registered repositories. GitHub PR metadata remains
+independently opt-in. See [Network and privacy](docs/NETWORK-PRIVACY.md).
 
 ## How it works
 
@@ -154,33 +154,25 @@ files do not contribute line counts.
 
 ## Network and privacy
 
-**Gita runs offline by default.** Local repository analysis and the local
-dashboard still work. Remote Git clone/fetch and GitHub CLI queries require
-separate, explicit opt-in settings, while `GITA_OFFLINE=1` overrides both.
-Next.js CLI telemetry is disabled when launched through the project's npm
-scripts.
+Gita analyzes source code and commit history locally. Merely opening the
+dashboard does not contact Git remotes. Clicking **Refresh project** or
+**Refresh repository** authorizes clone/fetch operations against the remote
+URLs already registered in Gita. No extra environment variable is needed.
 
-For Linux/macOS:
+The app reads from remote Git servers; it does not `git push` or upload
+project files to an analytics service. GitHub PR metadata queries through
+`gh` remain a separate optional integration.
 
-```bash
-GITA_ALLOW_REMOTE_GIT=1 GITA_ALLOW_GITHUB_METADATA=1 npm run dev
-```
+To force a fully offline refresh, set `GITA_OFFLINE=1` before starting Gita.
+An explicit `GITA_ALLOW_REMOTE_GIT=0` also disables remote Git refreshes.
+To opt into noninteractive/background Git operations in future integrations,
+`GITA_ALLOW_REMOTE_GIT=1` is supported. The offline switch always wins.
 
-For Windows PowerShell:
+Next.js CLI telemetry is disabled in the project's npm scripts. The local
+Fastify API is not exposed on the Internet.
 
-```powershell
-$env:GITA_ALLOW_REMOTE_GIT = "1"
-$env:GITA_ALLOW_GITHUB_METADATA = "1"
-npm run dev
-```
-
-Enable only the capability you need. Enabling remote Git authorizes the
-configured Git server to receive Git requests; enabling GitHub metadata
-authorizes `gh` to query GitHub. The local API never needs public Internet
-exposure for normal use.
-
-See [Network and privacy](docs/NETWORK-PRIVACY.md) for exact behavior,
-offline enforcement, limitations and how to inspect real process traffic.
+See [Network and privacy](docs/NETWORK-PRIVACY.md) for precise controls,
+their scope, and limitations.
 
 ## Desktop application (Tauri 2)
 

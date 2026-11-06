@@ -15,6 +15,8 @@ export interface GitCommandResult {
 export interface GitCommandOptions {
   cwd?: string;
   timeoutMs?: number;
+  /** Only an explicitly requested remote refresh may authorize network Git. */
+  allowRemoteGit?: boolean;
 }
 
 export class GitCommandError extends Error {
@@ -61,10 +63,13 @@ export async function runProcess(
   // A future packaged desktop may use a private API token. Neither Git nor
   // the GitHub CLI needs it, so do not leak it into child processes.
   delete childEnv.GITA_DESKTOP_TOKEN;
-  if (command === "git" && !isRemoteGitAllowed()) {
-    // Covers existing mirrors and Git URL rewrites in user/global config:
-    // reject HTTP(S), SSH and external Git remote helpers before connection.
-    childEnv.GIT_ALLOW_PROTOCOL = "file";
+  if (command === "git") {
+    const remoteAllowed = options.allowRemoteGit === false
+      ? false
+      : isRemoteGitAllowed(process.env, options.allowRemoteGit === true);
+    // Restrict transport even for approved operations: no git://, ext:: or
+    // custom remote helpers. Local-repository refreshes remain file-only.
+    childEnv.GIT_ALLOW_PROTOCOL = remoteAllowed ? "file:https:ssh" : "file";
     childEnv.GIT_TERMINAL_PROMPT = "0";
   }
 

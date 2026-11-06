@@ -1,68 +1,70 @@
-# Network privacy and offline operation
+# Network privacy and user-initiated refresh
 
-## Default behavior
+## Local-first operation and network authorization
 
-Gita's application runtime is **offline by default**. The browser UI talks
-only to its local Fastify API at `127.0.0.1`, and SQLite and Git mirrors
-remain on the local computer. Local repository analysis uses ordinary Git
-commands and does not require the GitHub CLI or an Internet connection.
+Gita stores repository mirrors, commit history and calculated metrics locally.
+The dashboard only talks to Fastify on loopback. **Opening the dashboard,
+reading local repositories or calculating metrics does not initiate Git
+network requests.**
 
-Git remote operations and GitHub metadata enrichment are **opt-in**.
-The feature is preserved, not removed. Each flag must equal `1`; other
-values do not grant consent. Restart the application after changing flags.
+The existing **Refresh project** and **Refresh repository** actions expressly
+authorize Git to clone or fetch the URLs already registered in the Gita
+database. The user's click is the authorization, as in the
+`git-insights-dashboard` reference. Refresh does not push to repositories,
+and an extra environment variable is **not** required for this normal flow.
 
-| Setting | Default | Effect |
+GitHub pull-request enrichment is separate: the `gh` CLI is only invoked
+when `GITA_ALLOW_GITHUB_METADATA=1` and `GITA_OFFLINE` is not set to 1.
+Core Git metrics continue to work when the CLI is missing or disabled.
+
+## Network policy
+
+| Setting | Default | Behavior |
 | --- | --- | --- |
-| `GITA_ALLOW_REMOTE_GIT=1` | Off | Permit Git fetch/clone over HTTPS/SSH for repositories you add |
-| `GITA_ALLOW_GITHUB_METADATA=1` | Off | Permit `gh auth status` and GitHub pull-request metadata queries |
-| `GITA_OFFLINE=1` | Off | Emergency kill-switch: deny both operations even when opt-ins are set |
+| No flags; no Refresh click | Local only | No Git clone/fetch or GitHub CLI calls |
+| Click Refresh on registered remote | Allowed | Fetches only the URL registered for that repository |
+| `GITA_ALLOW_REMOTE_GIT=1` | Unset | Also authorizes remote Git for explicitly invoked non-UI workflows |
+| `GITA_ALLOW_REMOTE_GIT=0` | Unset | Denies remote Git, including manual Refresh |
+| `GITA_ALLOW_GITHUB_METADATA=1` | Unset | Enables optional read-only `gh` queries during refresh |
+| `GITA_OFFLINE=1` | Unset | Denies Git remotes and `gh` regardless of any other permission |
 
-With no opt-in set:
-- You can register remote repository URLs, but **Refresh** rejects remote
-  Git access before creating a mirror. It does not perform a fallback fetch.
-- Existing cached remote mirrors cannot fetch from the network through
-  Gita. The Git subprocess receives `GIT_ALLOW_PROTOCOL=file`, rejecting
-  HTTP(S), SSH and other remote Git transport protocols, even if a cached
-  mirror's origin or a local URL rewrite points at a network server.
-- Only local Git file transport is permitted in the Git child process.
-  Local repositories can still refresh and be analyzed.
-- The GitHub adapter returns `network_disabled` without invoking `gh`.
-  The process runner also refuses to spawn `gh` without metadata consent.
-- The `GITA_DESKTOP_TOKEN` process environment variable, if present, is
-  stripped from child processes to avoid leaking a future desktop token.
-- The Next.js `dev` and `build` commands run with
-  `NEXT_TELEMETRY_DISABLED=1`, preventing Next.js CLI usage telemetry.
-
-## Enabling features explicitly
-
-For remote Git only:
-
-```bash
-GITA_ALLOW_REMOTE_GIT=1 npm run dev
-```
-
-To allow GitHub pull-request metadata too:
-
-```bash
-GITA_ALLOW_REMOTE_GIT=1 GITA_ALLOW_GITHUB_METADATA=1 npm run dev
-```
-
-PowerShell equivalents:
+Set an override **before starting** the application; restart afterward.
+For a forced-offline Windows PowerShell session:
 
 ```powershell
-$env:GITA_ALLOW_REMOTE_GIT = "1"
+$env:GITA_OFFLINE = "1"
+npm run dev
+```
+
+For ordinary remote repositories, start Gita normally and click Refresh.
+When GitHub PR metadata is needed, enable that capability separately:
+
+```powershell
 $env:GITA_ALLOW_GITHUB_METADATA = "1"
 npm run dev
 ```
 
-To **force offline** regardless of these settings, use
-`GITA_OFFLINE=1` and restart. Opt-in to GitHub metadata is separate
-from opt-in to Git remote access so the minimum necessary access can be
-enabled. Existing local file, commit and branch analytics remain available.
+## Trust boundaries and cached mirrors
+
+A remote refresh only permits HTTPS or SSH Git transports (plus the
+local file protocol used for repository cache/testing). The Git engine
+passes a fixed argument array to the Git executable and blocks `git://`,
+`ext::` and custom remote helpers. `GITA_OFFLINE=1` and the explicit
+remote-disable flag take precedence over a click.
+
+For existing mirrors, Gita supplies the **registered repository URL**
+directly to `git fetch --prune` with the bare-mirror refspec. This prevents
+a modified `remote.origin.url` in a cached mirror from silently
+redirecting the refresh to another server. Local-source mirrors always
+run Git with file-only transport, even if general remote access is enabled.
+
+Normal Git system configuration, credentials helpers, SSH agents and proxies
+may still connect to services used to authenticate the chosen remote. An
+OS-level firewall is necessary to guarantee absolute egress restrictions.
 
 ## What may leave the computer when access is enabled?
 
-- Git clone/fetch contacts the remote Git server configured by you and
+- An explicit Git refresh contacts the remote Git server you registered and
   transmits Git protocol requests, repository identifiers, authentication
   information if configured, and normal protocol negotiation. No
   `git push` operation is implemented by Gita.
@@ -98,16 +100,17 @@ migrate databases.
 
 ## Regression tests
 
-The Vitest suite verifies:
-1. Remote clone/fetch is rejected before writing a new mirror when offline.
-2. Git cannot establish a connection even to a local dummy HTTP server
-   while remote Git is disabled. The opt-in gate is checked separately;
-   no external test service is used.
-3. The GitHub CLI is never invoked while disabled; explicit metadata
-   opt-in restores existing behavior.
-4. `GITA_OFFLINE=1` overrides both opt-ins.
-5. A future desktop API session token is not forwarded to Git children.
+The Vitest tests cover:
+1. An arbitrary remote Git command is denied without authorization.
+2. An explicit Refresh successfully clones/fetches registered repositories,
+   including project refreshes with two repositories.
+3. A cached mirror with a changed origin still fetches only the URL
+   registered in the Gita database.
+4. `GITA_OFFLINE=1` and `GITA_ALLOW_REMOTE_GIT=0` block even a manual
+   Refresh; local sources still work offline.
+5. The GitHub CLI is never invoked without its independent permission.
+6. The desktop API session token is not forwarded into child processes.
 
-Run with `npm run test`, followed by `npm run lint`,
-`npm run typecheck` and `npm run build`. Existing dependency
-security audit checks remain unchanged.
+Validation commands: `npm run test`, `npm run lint`,
+`npm run typecheck`, `npm run build`, and the production dependency
+audit. These are application tests, **not** proof of zero OS-wide traffic.
