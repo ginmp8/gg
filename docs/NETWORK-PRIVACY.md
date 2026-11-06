@@ -44,6 +44,26 @@ $env:GITA_ALLOW_GITHUB_METADATA = "1"
 npm run dev
 ```
 
+## Annual engineering analytics
+
+The annual contribution engine processes Git commits and diffs from local,
+Gita-owned mirrors. The **Annual contribution** tab reads from the local
+SQLite database and does not automatically fetch remotes, GitHub API data,
+or contact a hosted analytics service.
+
+Explicit project/repository Refresh operations index missing annual metrics
+after updating their mirrors. The separate **Index local history** action
+uses existing mirrors only and does not contact external Git services.
+The optional **Fetch GitHub PRs and reviews (network)** action requires the
+independent `GITA_ALLOW_GITHUB_METADATA=1` setting and authenticated
+GitHub CLI. The application stores PR/review summaries and email associations
+locally, not in an external database.
+
+Project deletion removes only app-owned cached mirrors and scoped SQLite
+rows, after exact-name confirmation. It does not delete user source
+directories. See [annual analytics](ANNUAL-ANALYTICS.md) for data retention
+and methodology.
+
 ## Trust boundaries and cached mirrors
 
 A remote refresh only permits HTTPS or SSH Git transports (plus the

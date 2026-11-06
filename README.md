@@ -64,6 +64,46 @@ Gita is local-first and read-only toward analyzed repositories. Its database,
 mirror caches, logs, and exports stay inside `.gita/` in the application
 directory.
 
+## Engineering analytics — complete annual contribution
+
+The **Annual contribution** tab is the first view in every Gita project.
+It incorporates the complete-history, incremental annual measurement approach
+from [Git Insights Dashboard 0.3.0](https://github.com/ginmp8/git-insights-dashboard/pull/1).
+
+- **Full integration history:** select a reporting year to analyze every
+  reachable SHA on each repository's integration branch, without a 500-commit
+  sampling cap. Commits shared among branches in the same repository are
+  counted only once.
+- **Developer activity:** integrated and substantive commits, active days,
+  cosmetic-only changes, test-file touches, and monthly trends.
+- **Change-quality diagnostics:** gross churn, rename-aware churn,
+  whitespace-adjusted churn, and source/test/docs/generated breakdowns.
+- **Incremental SQLite processing:** indexes per-SHA measurements once,
+  reuses the local results on later refreshes, and reconciles rebased refs
+  without claiming incomplete data is complete.
+- **Optional collaboration:** manually map Git author emails and GitHub
+  logins; explicitly request GitHub PR/review snapshots with the separately
+  gated GitHub CLI integration. Unavailable data is not represented as zero.
+- **Local exports:** annual developer metrics in CSV or JSON.
+
+These are activity and collaboration **indicators, not a productivity
+score**. Code changes, PRs and reviews alone do not demonstrate delivery
+value or engineering quality. See the detailed
+[annual methodology, limitations and privacy boundaries](docs/ANNUAL-ANALYTICS.md).
+
+## Appearance and project lifecycle
+
+Select **Light**, **Dark**, or **System** in the dashboard header. The
+preference is stored locally in your browser and includes chart colors.
+
+A project's **Delete project and local data** control asks you to type the
+project name before permanent deletion. The operation removes Gita-owned
+SQLite project data, associated annual analytics and cached bare Git mirrors.
+It never deletes your original local source repositories or any Git remote.
+The application refuses deletion while a refresh is running or if a mirror
+path fails the safety checks. Local deletion is irreversible; back up data
+you want to keep.
+
 ## Quick start
 
 ### Requirements

@@ -243,6 +243,99 @@ export function migrateDatabase(sqlite: BetterSqlite3.Database): void {
       url TEXT NOT NULL
     );
 
+    -- Non-destructive incremental annual analytics. Immutable per-SHA measurements
+    -- survive branch movement; only the selected reference's membership changes.
+    CREATE TABLE IF NOT EXISTS annual_commit_metrics (
+      repo_id TEXT NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+      hash TEXT NOT NULL,
+      analysis_version INTEGER NOT NULL,
+      author_email TEXT NOT NULL,
+      author_name TEXT NOT NULL,
+      author_date TEXT NOT NULL,
+      gross_churn INTEGER NOT NULL,
+      rename_aware_churn INTEGER NOT NULL,
+      adjusted_churn INTEGER NOT NULL,
+      estimated_move_churn INTEGER NOT NULL,
+      estimated_whitespace_churn INTEGER NOT NULL,
+      source_churn INTEGER NOT NULL,
+      test_churn INTEGER NOT NULL,
+      docs_churn INTEGER NOT NULL,
+      generated_churn INTEGER NOT NULL,
+      reviewable_churn INTEGER NOT NULL,
+      moved_files INTEGER NOT NULL,
+      pure_moves INTEGER NOT NULL,
+      binary_files INTEGER NOT NULL,
+      substantive_commits INTEGER NOT NULL,
+      cosmetic_only_commits INTEGER NOT NULL,
+      test_touched_commits INTEGER NOT NULL,
+      PRIMARY KEY (repo_id, hash)
+    );
+    CREATE INDEX IF NOT EXISTS annual_metric_date_idx
+      ON annual_commit_metrics(repo_id, author_date);
+    CREATE TABLE IF NOT EXISTS annual_file_changes (
+      repo_id TEXT NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+      hash TEXT NOT NULL,
+      mode TEXT NOT NULL,
+      path TEXT NOT NULL,
+      old_path TEXT,
+      additions INTEGER NOT NULL,
+      deletions INTEGER NOT NULL,
+      binary INTEGER NOT NULL,
+      category TEXT NOT NULL,
+      PRIMARY KEY (repo_id, hash, mode, path)
+    );
+    CREATE INDEX IF NOT EXISTS annual_files_commit_idx
+      ON annual_file_changes(repo_id, hash);
+    CREATE TABLE IF NOT EXISTS annual_ref_commits (
+      repo_id TEXT NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+      ref TEXT NOT NULL,
+      hash TEXT NOT NULL,
+      PRIMARY KEY (repo_id, ref, hash)
+    );
+    CREATE INDEX IF NOT EXISTS annual_ref_commit_idx
+      ON annual_ref_commits(repo_id, hash);
+    CREATE TABLE IF NOT EXISTS annual_ref_state (
+      repo_id TEXT NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+      ref TEXT NOT NULL,
+      head_sha TEXT NOT NULL,
+      indexed_at TEXT NOT NULL,
+      eligible_commits INTEGER NOT NULL,
+      analysis_version INTEGER NOT NULL,
+      PRIMARY KEY (repo_id, ref)
+    );
+    CREATE TABLE IF NOT EXISTS annual_identity_links (
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      email TEXT NOT NULL,
+      canonical_email TEXT NOT NULL,
+      github_login TEXT,
+      PRIMARY KEY (project_id, email)
+    );
+    CREATE TABLE IF NOT EXISTS annual_pull_requests (
+      repo_id TEXT NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+      number INTEGER NOT NULL,
+      author_login TEXT NOT NULL,
+      merged_at TEXT,
+      url TEXT NOT NULL,
+      PRIMARY KEY (repo_id, number)
+    );
+    CREATE TABLE IF NOT EXISTS annual_pr_reviews (
+      repo_id TEXT NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+      number INTEGER NOT NULL,
+      reviewer_login TEXT NOT NULL,
+      submitted_at TEXT NOT NULL,
+      state TEXT NOT NULL,
+      PRIMARY KEY (repo_id, number, reviewer_login, submitted_at, state)
+    );
+    CREATE TABLE IF NOT EXISTS annual_pr_state (
+      repo_id TEXT PRIMARY KEY REFERENCES repositories(id) ON DELETE CASCADE,
+      fetched_at TEXT NOT NULL,
+      complete INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS annual_pr_author_idx
+      ON annual_pull_requests(repo_id, author_login, merged_at);
+    CREATE INDEX IF NOT EXISTS annual_pr_reviewer_idx
+      ON annual_pr_reviews(repo_id, reviewer_login, submitted_at);
+
     CREATE INDEX IF NOT EXISTS repositories_project_idx ON repositories(project_id);
     CREATE INDEX IF NOT EXISTS repositories_provider_idx ON repositories(provider);
     CREATE INDEX IF NOT EXISTS branch_views_project_idx ON branch_views(project_id);

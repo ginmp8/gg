@@ -15,6 +15,9 @@ import {
   createBranchView,
   createProject,
   createRefreshRun,
+  getAnnualReport,
+  listAnnualIdentities,
+  upsertAnnualIdentity,
   createRepositoryRecord,
   deleteBranchView,
   deleteProjectWithLocalData,
@@ -46,10 +49,11 @@ import {
   updateRepositoryRecord,
   type GitaDatabase
 } from "@gita/db";
-import { resolveRepositoryInput } from "@gita/git-engine";
+import { isGitHubMetadataAllowed, resolveRepositoryInput } from "@gita/git-engine";
 import { createGitHubAdapter } from "@gita/github-adapter";
 
 import { enqueueProjectRefresh, enqueueRepositoryRefresh } from "./refresh";
+import { enqueueAnnualProjectIndex, syncAnnualGitHubCollaboration } from "./annual";
 
 const idParamsSchema = z.object({
   projectId: z.string().min(1).optional(),
@@ -112,6 +116,81 @@ export function registerRoutes(server: FastifyInstance, database: GitaDatabase):
       }
       throw error;
     }
+  });
+
+
+  // The annual report is a local SQLite read. It never refreshes Git or
+  // contacts GitHub as a side effect of opening the dashboard.
+  server.get("/api/projects/:projectId/annual", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    const query = z.object({
+      year: z.coerce.number().int().min(1970).max(2100),
+      repositoryId: z.string().uuid().optional()
+    }).parse(request.query);
+    const project = await getProject(database, requireId(projectId));
+    if (!project) return reply.status(404).send({ error: "not_found" });
+    if (query.repositoryId && (await getRepository(database, query.repositoryId))?.projectId !== project.id) {
+      return reply.status(400).send({ error: "repository_not_in_project" });
+    }
+    return getAnnualReport(database, project.id, query.year, query.repositoryId);
+  });
+
+  server.get("/api/projects/:projectId/annual/identities", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    const project = await getProject(database, requireId(projectId));
+    if (!project) return reply.status(404).send({ error: "not_found" });
+    return { items: listAnnualIdentities(database, project.id) };
+  });
+
+  server.post("/api/projects/:projectId/annual/identities", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    const link = z.object({
+      email: z.email().max(254),
+      canonicalEmail: z.email().max(254),
+      githubLogin: z.string().regex(/^[a-zA-Z0-9-]{1,39}$/).nullable()
+    }).parse(request.body);
+    const project = await getProject(database, requireId(projectId));
+    if (!project) return reply.status(404).send({ error: "not_found" });
+    upsertAnnualIdentity(database, project.id, link);
+    return { items: listAnnualIdentities(database, project.id) };
+  });
+
+  server.post("/api/projects/:projectId/annual/reindex", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    const project = await getProject(database, requireId(projectId));
+    if (!project) return reply.status(404).send({ error: "not_found" });
+    const run = await createRefreshRun(database, {
+      projectId: project.id, repositoryId: null, scope: "project", status: "queued"
+    });
+    enqueueAnnualProjectIndex(database, run.id, project.id);
+    return reply.status(202).send(run);
+  });
+
+  server.post("/api/projects/:projectId/annual/github-sync", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    const project = await getProject(database, requireId(projectId));
+    if (!project) return reply.status(404).send({ error: "not_found" });
+    if (!isGitHubMetadataAllowed()) {
+      return reply.status(403).send({
+        error: "network_disabled",
+        message: "Set GITA_ALLOW_GITHUB_METADATA=1 to opt into read-only GitHub collaboration queries."
+      });
+    }
+    const body = z.object({ repositoryId: z.string().uuid().optional() }).parse(request.body ?? {});
+    const repos = await listRepositories(database, project.id);
+    const chosen = repos.filter((repo) =>
+      repo.provider === "github" && (body.repositoryId === undefined || repo.id === body.repositoryId)
+    );
+    if (!chosen.length) {
+      return reply.status(400).send({ error: "no_github_repository" });
+    }
+    const results = [];
+    for (const repo of chosen) {
+      const source = await getRepositoryWithProviderDetails(database, repo.id);
+      if (!source) continue;
+      results.push(await syncAnnualGitHubCollaboration(database, source));
+    }
+    return { items: results };
   });
 
   server.get("/api/projects/:projectId/branch-views", async (request, reply) => {

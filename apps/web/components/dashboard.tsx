@@ -38,6 +38,7 @@ import type {
   FileTypeAnalyticsRow,
   HotFileAnalyticsRow,
   PullRequest,
+  Project,
   RefreshRun,
   RepositoryFolderFilter,
   Repository,
@@ -45,6 +46,7 @@ import type {
 } from "@gita/core";
 
 import { ActivityChart } from "@/components/activity-chart";
+import { AnnualAnalytics } from "@/components/annual-analytics";
 import {
   ContributorComparisonChart,
   ContributorFileTypeShareChart
@@ -869,8 +871,13 @@ export function Dashboard() {
         {projects.length === 0 && !projectsQuery.isLoading ? (
           <EmptyProjectState onCreate={() => setProjectDialogOpen(true)} />
         ) : (
-          <Tabs.Root defaultValue="overview" className="grid gap-4">
+          <Tabs.Root defaultValue="annual" className="grid gap-4">
             <Tabs.List className="flex overflow-x-auto rounded-md border border-border bg-panel p-1 text-sm shadow-panel">
+              <TabTrigger
+                value="annual"
+                icon={<BarChart3 className="h-4 w-4" />}
+                label="Annual contribution"
+              />
               <TabTrigger
                 value="overview"
                 icon={<Database className="h-4 w-4" />}
@@ -898,6 +905,18 @@ export function Dashboard() {
               />
             </Tabs.List>
 
+            <Tabs.Content
+              value="annual"
+              className="grid gap-4 data-[state=inactive]:hidden"
+            >
+              {selectedProjectId ? (
+                <AnnualAnalytics
+                  projectId={selectedProjectId}
+                  repositoryId={selectedRepoId}
+                  onRunStarted={setActiveRunId}
+                />
+              ) : null}
+            </Tabs.Content>
             <Tabs.Content
               value="overview"
               className="grid gap-4 data-[state=inactive]:hidden"

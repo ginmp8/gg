@@ -1,5 +1,7 @@
 import type {
   ActivityBucket,
+  AnnualIdentityLink,
+  AnnualReport,
   Branch,
   BranchView,
   BranchScope,
@@ -85,6 +87,39 @@ export async function deleteProjectAndLocalData(projectId: string, confirmName: 
   return apiRequest(`/api/projects/${projectId}`, {
     method: "DELETE",
     body: JSON.stringify({ confirmName, deleteLocalData: true })
+  });
+}
+
+export async function getAnnualReport(
+  projectId: string, year: number, repositoryId?: string
+): Promise<AnnualReport> {
+  const params = new URLSearchParams({ year: String(year) });
+  if (repositoryId && repositoryId !== "all") params.set("repositoryId", repositoryId);
+  return apiRequest(`/api/projects/${projectId}/annual?${params}`);
+}
+
+export async function getAnnualIdentities(projectId: string): Promise<ListResponse<AnnualIdentityLink>> {
+  return apiRequest(`/api/projects/${projectId}/annual/identities`);
+}
+
+export async function saveAnnualIdentity(
+  projectId: string, link: AnnualIdentityLink
+): Promise<ListResponse<AnnualIdentityLink>> {
+  return apiRequest(`/api/projects/${projectId}/annual/identities`, {
+    method: "POST", body: JSON.stringify(link)
+  });
+}
+
+export async function indexAnnualProject(projectId: string): Promise<RefreshRun> {
+  return apiRequest(`/api/projects/${projectId}/annual/reindex`, { method: "POST" });
+}
+
+export async function syncAnnualGitHub(
+  projectId: string, repositoryId?: string
+): Promise<{ items: Array<{ repoId: string; received: number; complete: boolean }> }> {
+  return apiRequest(`/api/projects/${projectId}/annual/github-sync`, {
+    method: "POST",
+    body: JSON.stringify(repositoryId && repositoryId !== "all" ? { repositoryId } : {})
   });
 }
 

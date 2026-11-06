@@ -1,6 +1,7 @@
 import { performance } from "node:perf_hooks";
 
 import { createGitHubAdapter } from "@gita/github-adapter";
+import { indexAnnualRepository } from "./annual";
 import { analyzeRepository, ensureMirrorRepository, GitCommandError } from "@gita/git-engine";
 import {
   createRefreshRun,
@@ -138,6 +139,12 @@ async function refreshRepositoryRun(
     const analysis = await analyzeRepository(repo.cachePath, repo.defaultBranch);
     analysisMs = Math.round(performance.now() - analysisStart);
     storeRepositoryAnalysis(database, repo, analysis);
+    await updateRefreshRun(database, runId, {
+      currentStep: "Indexing annual contribution incrementally",
+      currentRepositoryName: repo.name
+    });
+    await onProgress?.({ currentStep: "Indexing annual contribution incrementally" });
+    await indexAnnualRepository(database, repo);
     const githubOwnerRepo = repo.provider === "github" ? repo.githubOwnerRepo : null;
     const shouldFetchProvider = Boolean(githubOwnerRepo);
     await updateRefreshRun(database, runId, {
