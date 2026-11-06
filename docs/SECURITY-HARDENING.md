@@ -71,16 +71,20 @@ checks, weakening assertions, or silently updating unrelated packages.
 
 ## Network/privacy controls (2026-11-05)
 
-Application egress is now **opt-in**, using
-`GITA_ALLOW_REMOTE_GIT=1` and `GITA_ALLOW_GITHUB_METADATA=1`.
-`GITA_OFFLINE=1` blocks both even if enabled. Default Git subprocesses
-receive `GIT_ALLOW_PROTOCOL=file` to reject external Git transports,
-including through already cached mirrors. The Github adapter and process
-runner do not launch `gh` without explicit consent. The Next.js CLI
-telemetry option is disabled for local `dev` and `build`.
+Git networking is limited to explicitly authorized operations:
+the user's **Refresh** action for registered remote URLs, or the
+`GITA_ALLOW_REMOTE_GIT=1` environment opt-in for non-UI consumers.
+`GITA_OFFLINE=1` and `GITA_ALLOW_REMOTE_GIT=0` deny a remote refresh
+regardless of a click. Git subprocesses only allow file, HTTPS and SSH
+transports when authorized; local-source refreshes remain file-only.
+Cached mirror fetches use the URL stored by Gita, not a possibly altered
+origin. The GitHub adapter still requires independent
+`GITA_ALLOW_GITHUB_METADATA=1` consent and does not contact GitHub during
+local-only analysis.
 
-Regression tests cover the default-deny behavior and a dummy loopback
-network endpoint for opt-in behavior. Source code and tests do not
+The Next.js CLI telemetry option remains disabled in the `dev` and
+`build` scripts. Regression tests cover user-triggered refreshes, cached
+mirror origin changes and offline-deny behavior. Source code and tests do not
 establish OS-wide absence of network traffic; use a system firewall and
 capture real process traffic for an executable-level assurance.
 

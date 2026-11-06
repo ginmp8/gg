@@ -116,26 +116,39 @@ export async function ensureMirrorRepository(params: {
   fetchUrl: string;
   cachePath: string;
   reposRoot: string;
+  /** Set only for a refresh explicitly requested by the user. */
+  userInitiated?: boolean;
 }): Promise<{ gitFetchMs: number; operation: "clone" | "fetch" }> {
   assertAppOwnedCachePath(params.cachePath, params.reposRoot);
-  // Local repositories remain usable offline. A remote source requires an
-  // explicit opt-in, including when it was already cached in a Git mirror.
-  // runGit independently restricts Git protocols while offline.
-  if (!path.isAbsolute(params.fetchUrl) && !isRemoteGitAllowed()) {
-    throw new Error("Remote Git access is disabled. Set GITA_ALLOW_REMOTE_GIT=1 to enable it.");
+  const isRemote = !path.isAbsolute(params.fetchUrl);
+  if (isRemote && !isRemoteGitAllowed(process.env, params.userInitiated === true)) {
+    throw new Error(
+      "Remote Git access is disabled. Use an explicit Refresh action or " +
+      "set GITA_ALLOW_REMOTE_GIT=1; check GITA_OFFLINE=1 and GITA_ALLOW_REMOTE_GIT=0."
+    );
   }
   fs.mkdirSync(path.dirname(params.cachePath), { recursive: true });
+  const options = {
+    timeoutMs: 300_000,
+    // A local source must not contact a network remote, even when global
+    // remote-Git opt-in is configured.
+    allowRemoteGit: isRemote
+      ? (params.userInitiated === true ? true : undefined)
+      : false
+  };
 
   if (fs.existsSync(params.cachePath)) {
-    const result = await runGit(["-C", params.cachePath, "fetch", "--prune"], {
-      timeoutMs: 300_000
-    });
+    // Git -c remote.origin.url=... ADDS another URL rather than replacing
+    // cached ones. Fetch by the registered URL with the mirror refspec to
+    // prevent an altered origin from contacting a different remote.
+    const args = isRemote
+      ? ["-C", params.cachePath, "fetch", "--prune", params.fetchUrl, "+refs/*:refs/*"]
+      : ["-C", params.cachePath, "fetch", "--prune"];
+    const result = await runGit(args, options);
     return { gitFetchMs: result.durationMs, operation: "fetch" };
   }
 
-  const result = await runGit(["clone", "--mirror", params.fetchUrl, params.cachePath], {
-    timeoutMs: 300_000
-  });
+  const result = await runGit(["clone", "--mirror", params.fetchUrl, params.cachePath], options);
   return { gitFetchMs: result.durationMs, operation: "clone" };
 }
 

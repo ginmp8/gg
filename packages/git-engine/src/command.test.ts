@@ -9,8 +9,9 @@ import { isRemoteGitAllowed, isGitHubMetadataAllowed } from "./network-policy";
 afterEach(() => vi.unstubAllEnvs());
 
 describe("network egress controls", () => {
-  it("requires exact opt-in and honors an offline override", () => {
+  it("requires explicit operation authorization and honors offline overrides", () => {
     expect(isRemoteGitAllowed()).toBe(false);
+    expect(isRemoteGitAllowed(process.env, true)).toBe(true);
     expect(isGitHubMetadataAllowed()).toBe(false);
     vi.stubEnv("GITA_ALLOW_REMOTE_GIT", "true");
     vi.stubEnv("GITA_ALLOW_GITHUB_METADATA", "yes");
@@ -22,7 +23,11 @@ describe("network egress controls", () => {
     expect(isGitHubMetadataAllowed()).toBe(true);
     vi.stubEnv("GITA_OFFLINE", "1");
     expect(isRemoteGitAllowed()).toBe(false);
+    expect(isRemoteGitAllowed(process.env, true)).toBe(false);
     expect(isGitHubMetadataAllowed()).toBe(false);
+    vi.stubEnv("GITA_OFFLINE", "0");
+    vi.stubEnv("GITA_ALLOW_REMOTE_GIT", "0");
+    expect(isRemoteGitAllowed(process.env, true)).toBe(false);
   });
 
   it("does not start GitHub CLI without consent", async () => {
@@ -52,6 +57,16 @@ describe("network egress controls", () => {
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }
+  });
+
+  it("the offline override denies network transports even with per-refresh consent", async () => {
+    vi.stubEnv("GITA_OFFLINE", "1");
+    await expect(runGit(["ls-remote", "https://example.invalid/private.git"], {
+      timeoutMs: 5_000,
+      allowRemoteGit: true
+    })).rejects.toMatchObject({
+      result: { stderr: expect.stringMatching(/transport 'https' not allowed/i) }
+    });
   });
 
   it("never forwards a future desktop API token to a child process", async () => {

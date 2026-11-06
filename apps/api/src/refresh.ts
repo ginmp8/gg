@@ -119,7 +119,10 @@ async function refreshRepositoryRun(
     const fetchResult = await ensureMirrorRepository({
       fetchUrl: repo.localPath ?? repo.url,
       cachePath: repo.cachePath,
-      reposRoot: database.paths.reposDir
+      reposRoot: database.paths.reposDir,
+      // This worker is reached only from explicit POST Refresh actions.
+      // No network fetch is scheduled when the dashboard merely loads.
+      userInitiated: true
     });
     gitFetchMs = fetchResult.gitFetchMs;
     await updateRefreshRun(database, runId, {
