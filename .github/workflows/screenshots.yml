@@ -24,7 +24,7 @@ jobs:
     timeout-minutes: 20
     env:
       GG_OFFLINE: "1"
-      GG_DATA_DIR: ${{ runner.temp }}/gg-analytics-screenshots-data
+      GG_DATA_DIR: /tmp/gg-analytics-screenshots-data
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - name: Check out development
