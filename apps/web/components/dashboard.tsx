@@ -38,6 +38,8 @@ import type {
   FileTypeAnalyticsRow,
   HotFileAnalyticsRow,
   PullRequest,
+  ProjectBranch,
+  ProjectPullRequest,
   Project,
   RefreshRun,
   RepositoryFolderFilter,
@@ -64,6 +66,8 @@ import {
   deleteBranchView,
   deleteProjectAndLocalData,
   getBranches,
+  getProjectBranches,
+  getProjectPullRequests,
   getBranchViews,
   getContributorFileTypes,
   getFileTypes,
@@ -150,6 +154,8 @@ export function Dashboard() {
   const queryClient = useQueryClient();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedRepoId, setSelectedRepoId] = useState("all");
+  const [branchPage, setBranchPage] = useState(0);
+  const [prPage, setPrPage] = useState(0);
   const [selectedContributorId, setSelectedContributorId] = useState<string | null>(null);
   const [datePreset, setDatePreset] = useState<DateRangePreset>("all");
   const [monthCursor, setMonthCursor] = useState(() => startOfMonth(new Date()));
@@ -315,6 +321,20 @@ export function Dashboard() {
       getContributorFileTypes(requireSelected(selectedProjectId), contributorFilters ?? {}),
     enabled: Boolean(selectedProjectId && contributorFilters)
   });
+  useEffect(() => {
+    setBranchPage(0);
+    setPrPage(0);
+  }, [selectedProjectId, selectedRepoId]);
+  const projectBranchesQuery = useQuery({
+    queryKey: ["project-branches", selectedProjectId, branchPage],
+    queryFn: () => getProjectBranches(requireSelected(selectedProjectId), branchPage),
+    enabled: Boolean(selectedProjectId && selectedRepoId === "all")
+  });
+  const projectPullRequestsQuery = useQuery({
+    queryKey: ["project-pull-requests", selectedProjectId, prPage],
+    queryFn: () => getProjectPullRequests(requireSelected(selectedProjectId), prPage),
+    enabled: Boolean(selectedProjectId && selectedRepoId === "all")
+  });
   const branchesQuery = useQuery({
     queryKey: ["branches", selectedRepoId],
     queryFn: () => getBranches(selectedRepoId),
@@ -479,9 +499,19 @@ export function Dashboard() {
   const hotFiles = hotFilesQuery.data?.items ?? [];
   const contributorFileTypes = contributorFileTypesQuery.data?.items ?? [];
   const selectedContributorFileTypes = selectedContributorFileTypesQuery.data?.items ?? [];
-  const branches = branchesQuery.data?.items ?? [];
-  const pullRequests = pullRequestsQuery.data?.items ?? [];
-  const providerState = pullRequestsQuery.data?.providerState ?? null;
+  const branches: ProjectBranch[] = selectedRepoId === "all"
+    ? projectBranchesQuery.data?.items ?? []
+    : (branchesQuery.data?.items ?? []).map(row => ({
+        ...row, repositoryName: selectedRepository?.name ?? ""
+      }));
+  const pullRequests: ProjectPullRequest[] = selectedRepoId === "all"
+    ? projectPullRequestsQuery.data?.items ?? []
+    : (pullRequestsQuery.data?.items ?? []).map(row => ({
+        ...row, repositoryName: selectedRepository?.name ?? ""
+      }));
+  const providerState = selectedRepoId === "all"
+    ? projectPullRequestsQuery.data?.providerState ?? null
+    : pullRequestsQuery.data?.providerState ?? null;
   const currentRun = refreshRunQuery.data ?? null;
   const repositoryBranchSettings = repositories.map((repo, index) =>
     toRepositoryBranchSetting(repo, repositoryBranchesQueries[index]?.data?.items ?? [])
@@ -1198,14 +1228,18 @@ export function Dashboard() {
                 subtitle={
                   selectedRepository
                     ? `${selectedRepository.name} · time source ${branchesQuery.data?.branchTimeSource ?? "headCommit"}`
-                    : "Select one repository"
+                    : `${repositories.length} repositories · all branches`
                 }
               />
+              {projectBranchesQuery.isError && selectedRepoId === "all" ? <ErrorBanner error={projectBranchesQuery.error} /> : null}
+              {branchesQuery.isError && selectedRepoId !== "all" ? <ErrorBanner error={branchesQuery.error} /> : null}
+              {selectedRepoId === "all" && projectBranchesQuery.isLoading ? <LoadingBlock /> : null}
               <DataTable
                 columns={branchColumns}
                 data={branches}
                 emptyLabel="No branch data available."
               />
+              {selectedRepoId === "all" && <ProjectPager page={branchPage} total={projectBranchesQuery.data?.total ?? 0} pageSize={200} onPage={setBranchPage} />}
               <BranchComparisonPanel
                 repositoryId={selectedRepoId === "all" ? null : selectedRepoId}
                 branches={branches}
@@ -1218,9 +1252,12 @@ export function Dashboard() {
             >
               <SectionTitle
                 title="Pull requests"
-                subtitle={selectedRepository ? selectedRepository.name : "Select one repository"}
+                subtitle={selectedRepository ? selectedRepository.name : `${repositories.length} repositories · all pull requests`}
               />
-              {providerState && !providerState.available ? (
+              {projectPullRequestsQuery.isError && selectedRepoId === "all" ? <ErrorBanner error={projectPullRequestsQuery.error} /> : null}
+              {pullRequestsQuery.isError && selectedRepoId !== "all" ? <ErrorBanner error={pullRequestsQuery.error} /> : null}
+              {selectedRepoId === "all" && projectPullRequestsQuery.isLoading ? <LoadingBlock /> : null}
+              {providerState && !providerState.available && providerState.reason !== "unsupported_provider" ? (
                 <div className="flex items-start gap-3 rounded-md border border-warning/40 bg-panel p-4 text-sm shadow-panel">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                   <div>
@@ -1234,6 +1271,7 @@ export function Dashboard() {
                 data={pullRequests}
                 emptyLabel="No pull request metadata available."
               />
+              {selectedRepoId === "all" && <ProjectPager page={prPage} total={projectPullRequestsQuery.data?.total ?? 0} pageSize={200} onPage={setPrPage} />}
             </Tabs.Content>
           </Tabs.Root>
         )}
@@ -1476,7 +1514,8 @@ const contributorFileTypeColumns: Array<ColumnDef<ContributorFileTypeRow>> = [
   }
 ];
 
-const branchColumns: Array<ColumnDef<Branch>> = [
+const branchColumns: Array<ColumnDef<ProjectBranch>> = [
+  { accessorKey: "repositoryName", header: "Repository" },
   { accessorKey: "name", header: "Branch" },
   {
     accessorKey: "remote",
@@ -1496,7 +1535,8 @@ const branchColumns: Array<ColumnDef<Branch>> = [
   { accessorKey: "branchTimeSource", header: "Time source" }
 ];
 
-const pullRequestColumns: Array<ColumnDef<PullRequest>> = [
+const pullRequestColumns: Array<ColumnDef<ProjectPullRequest>> = [
+  { accessorKey: "repositoryName", header: "Repository" },
   { accessorKey: "number", header: "#", cell: ({ getValue }) => `#${getValue<number>()}` },
   { accessorKey: "title", header: "Title" },
   { accessorKey: "state", header: "State" },
@@ -1516,6 +1556,21 @@ const pullRequestColumns: Array<ColumnDef<PullRequest>> = [
     cell: ({ getValue }) => formatDate(getValue<string | null>())
   }
 ];
+
+function ProjectPager({ page, total, pageSize, onPage }: {
+  page: number; total: number; pageSize: number; onPage: (page: number) => void;
+}) {
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  return (
+    <nav aria-label="Project results pages" className="flex items-center justify-end gap-3 text-xs text-muted-foreground">
+      <span className="tabular-nums">{total.toLocaleString()} entries · page {page + 1} / {pages}</span>
+      <button type="button" disabled={page <= 0} onClick={() => onPage(page - 1)}
+        className="h-9 rounded border border-border bg-panel px-3 disabled:opacity-40">Previous</button>
+      <button type="button" disabled={page >= pages - 1} onClick={() => onPage(page + 1)}
+        className="h-9 rounded border border-border bg-panel px-3 disabled:opacity-40">Next</button>
+    </nav>
+  );
+}
 
 function ContributorDetail({
   contributor,

@@ -41,6 +41,8 @@ import {
   getRepositoryWithProviderDetails,
   listBranchViews,
   listBranches,
+  listProjectBranches,
+  listProjectPullRequests,
   listProjects,
   listPullRequests,
   listRepositories,
@@ -511,6 +513,33 @@ export function registerRoutes(server: FastifyInstance, database: GitaDatabase):
       branchTimeSource: "headCommit",
       items: await listBranches(database, repository.id, filters)
     };
+  });
+
+
+  // Aggregated, paginated local inventories; the repository name disambiguates identical branch/PR numbers.
+  server.get("/api/projects/:projectId/branches", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    const project = await getProject(database, requireId(projectId));
+    if (!project) return reply.status(404).send({ error: "not_found" });
+    const { limit, offset } = z.object({
+      limit: z.coerce.number().int().min(1).max(500).default(200),
+      offset: z.coerce.number().int().min(0).default(0)
+    }).parse(request.query);
+    return listProjectBranches(database, project.id, limit, offset);
+  });
+
+  server.get("/api/projects/:projectId/pull-requests", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    const project = await getProject(database, requireId(projectId));
+    if (!project) return reply.status(404).send({ error: "not_found" });
+    const { limit, offset } = z.object({
+      limit: z.coerce.number().int().min(1).max(500).default(200),
+      offset: z.coerce.number().int().min(0).default(0)
+    }).parse(request.query);
+    const repositories = await listRepositories(database, project.id);
+    const github = repositories.find(repo => repo.provider === "github" && repo.githubOwnerRepo);
+    const providerState = await resolveProviderState(github?.provider ?? "local", github?.githubOwnerRepo ?? null);
+    return { ...listProjectPullRequests(database, project.id, limit, offset), providerState };
   });
 
   server.get("/api/repositories/:repoId/pull-requests", async (request, reply) => {

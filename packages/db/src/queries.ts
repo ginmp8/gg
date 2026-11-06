@@ -5,6 +5,8 @@ import type {
   ActivityBucket,
   AnalyticsFilters,
   Branch,
+  ProjectBranch,
+  ProjectPullRequest,
   BranchView,
   CommitBranchMembership,
   CommitFileStat,
@@ -1000,6 +1002,46 @@ export async function getRepositorySummary(
     return null;
   }
   return getProjectSummary(database, repo.projectId, { ...filters, repositoryId: repoId });
+}
+
+
+/** Paginated, project-scoped branch inventory. One SQLite read regardless of repo count. */
+export function listProjectBranches(
+  database: GitaDatabase, projectId: string, limit = 200, offset = 0
+): { items: ProjectBranch[]; total: number } {
+  const total = (database.sqlite.prepare(
+    "SELECT COUNT(*) AS count FROM branches b JOIN repositories r ON r.id=b.repo_id WHERE r.project_id=?"
+  ).get(projectId) as { count: number }).count;
+  const rows = database.sqlite.prepare(
+    "SELECT b.repo_id AS repoId, r.name AS repositoryName, b.name, " +
+    "NULLIF(b.remote, '') AS remote, b.is_default AS isDefault, " +
+    "b.head_commit_hash AS headCommitHash, b.last_commit_at AS lastCommitAt, " +
+    "b.created_at_estimate AS createdAtEstimate, b.provider_created_at AS providerCreatedAt, " +
+    "b.branch_time_source AS branchTimeSource, b.updated_at AS updatedAt " +
+    "FROM branches b JOIN repositories r ON r.id=b.repo_id " +
+    "WHERE r.project_id=? ORDER BY r.name COLLATE NOCASE, b.is_default DESC, b.name COLLATE NOCASE " +
+    "LIMIT ? OFFSET ?"
+  ).all(projectId, limit, offset) as Array<ProjectBranch & { isDefault: number | boolean }>;
+  return { items: rows.map(row => ({ ...row, isDefault: Boolean(row.isDefault) })), total };
+}
+
+/** Paginated, project-scoped PR inventory. Provider status is resolved once in the API. */
+export function listProjectPullRequests(
+  database: GitaDatabase, projectId: string, limit = 200, offset = 0
+): { items: ProjectPullRequest[]; total: number } {
+  const total = (database.sqlite.prepare(
+    "SELECT COUNT(*) AS count FROM pull_requests p JOIN repositories r ON r.id=p.repo_id WHERE r.project_id=?"
+  ).get(projectId) as { count: number }).count;
+  const items = database.sqlite.prepare(
+    "SELECT p.repo_id AS repoId, r.name AS repositoryName, p.provider, p.provider_id AS providerId, " +
+    "p.number, p.title, p.state, p.author_login AS authorLogin, p.created_at AS createdAt, " +
+    "p.updated_at AS updatedAt, p.closed_at AS closedAt, p.merged_at AS mergedAt, " +
+    "p.base_branch AS baseBranch, p.head_branch AS headBranch, p.additions, p.deletions, " +
+    "p.changed_files AS changedFiles, p.review_decision AS reviewDecision, p.url " +
+    "FROM pull_requests p JOIN repositories r ON r.id=p.repo_id WHERE r.project_id=? " +
+    "ORDER BY p.updated_at DESC, r.name COLLATE NOCASE, p.number DESC LIMIT ? OFFSET ?"
+  ).all(projectId, limit, offset) as ProjectPullRequest[];
+  return { items, total };
 }
 
 export async function listBranches(

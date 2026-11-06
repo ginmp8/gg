@@ -145,6 +145,10 @@ export interface Branch {
   updatedAt: ISODateString;
 }
 
+export interface ProjectBranch extends Branch {
+  repositoryName: string;
+}
+
 export interface PullRequest {
   repoId: string;
   provider: "github";
@@ -164,6 +168,10 @@ export interface PullRequest {
   changedFiles: number | null;
   reviewDecision: string | null;
   url: string;
+}
+
+export interface ProjectPullRequest extends PullRequest {
+  repositoryName: string;
 }
 
 export interface AnalyticsFilters {

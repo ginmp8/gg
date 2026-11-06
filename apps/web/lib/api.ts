@@ -14,6 +14,8 @@ import type {
   ProjectSummary,
   ProviderState,
   PullRequest,
+  ProjectBranch,
+  ProjectPullRequest,
   RefreshRun,
   RepositoryFolderFilter,
   Repository,
@@ -265,6 +267,23 @@ export async function getContributorFileTypes(
   filters: DashboardFilters
 ): Promise<ListResponse<ContributorFileTypeRow>> {
   return apiRequest(`/api/projects/${projectId}/contributor-file-types${queryString(filters)}`);
+}
+
+
+export interface ProjectPage<T> extends ListResponse<T> {
+  total: number;
+}
+
+export function getProjectBranches(projectId: string, page = 0, size = 200): Promise<ProjectPage<ProjectBranch>> {
+  return apiRequest("/api/projects/" + encodeURIComponent(projectId) +
+    "/branches?limit=" + size + "&offset=" + page * size);
+}
+
+export function getProjectPullRequests(
+  projectId: string, page = 0, size = 200
+): Promise<ProjectPage<ProjectPullRequest> & { providerState: ProviderState }> {
+  return apiRequest("/api/projects/" + encodeURIComponent(projectId) +
+    "/pull-requests?limit=" + size + "&offset=" + page * size);
 }
 
 export async function getBranches(
