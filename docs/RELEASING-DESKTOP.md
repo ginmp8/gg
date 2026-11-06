@@ -22,9 +22,11 @@ Examples using GitHub CLI:
 gh workflow run desktop.yml --repo ginmp8/gg --ref development -f publish=false
 
 # Explicit release after approval and version/tag review
-# git tag -a v0.1.0 -m "GG Desktop v0.1.0"
-# git push origin v0.1.0
-gh workflow run desktop.yml --repo ginmp8/gg --ref v0.1.0 -f publish=true
+# Only after version metadata is aligned to 0.3.0, CI is green and
+# the exact commit and installer packages have been reviewed:
+# git tag -a v0.3.0 -m "GG Desktop v0.3.0"
+# git push origin v0.3.0
+# gh workflow run desktop.yml --repo ginmp8/gg --ref v0.3.0 -f publish=true
 ```
 
 Do not create a release tag until the build succeeds and the version is
