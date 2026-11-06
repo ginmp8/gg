@@ -122,7 +122,7 @@ describe("explicit project refresh network consent", () => {
         expect(report.coverage.map((item) => item.repoId)).toEqual([repo.id]);
         expect(report.totals.commits).toBe(1);
         expect(report.contributors.map((item) => item.primaryEmail)).toEqual([
-          `${repo.name}@example.test`
+          repo.name === "repo-1" ? "repo-one@example.test" : "repo-two@example.test"
         ]);
       }
 
