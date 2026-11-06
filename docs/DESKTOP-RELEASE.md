@@ -6,7 +6,7 @@
 
 - Full-history annual contribution analytics, incremental local SQLite indexing and ICE-Git/1 contribution evidence.
 - Experimental GG-Throughput/1 technical productivity proxy; traceable per-developer diff and commit samples.
-- Compare two to four selected contributors side by side with user-created tag filtering.
+- Compare any number of contributors side by side, with saved selections, filtered select-all, and user-created tags.
 - Project-wide branch and PR inventories with repository source columns and pagination.
 - User-defined custom tags and optional groups, assignable to contributors, repos, branches and pull requests.
 - Dedicated Settings tab for project management, refresh, saved branch views, labels and appearance.
