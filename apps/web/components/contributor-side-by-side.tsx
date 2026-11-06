@@ -89,8 +89,9 @@ export function ContributorSideBySide({
         monthly: monthly.get(person.primaryEmail) ?? [] }));
   }, [data, scoreByEmail, selected, selectable]);
 
-  const allMatching = people.length > 0 && people.every(person => selected.includes(person.primaryEmail));
-  const someMatching = people.some(person => selected.includes(person.primaryEmail));
+  const selectedEmails = useMemo(() => new Set(selected), [selected]);
+  const allMatching = people.length > 0 && people.every(person => selectedEmails.has(person.primaryEmail));
+  const someMatching = people.some(person => selectedEmails.has(person.primaryEmail));
   useEffect(() => {
     if (selectAllRef.current) selectAllRef.current.indeterminate = someMatching && !allMatching;
   }, [allMatching, someMatching]);
@@ -183,7 +184,7 @@ export function ContributorSideBySide({
         <div className="max-h-48 overflow-y-auto rounded border border-border bg-background p-2 lg:col-span-3">
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
             {people.map(person => {
-              const checked = selected.includes(person.primaryEmail);
+              const checked = selectedEmails.has(person.primaryEmail);
               return (
                 <label key={person.primaryEmail} className="flex min-w-0 items-center gap-2 rounded px-2 py-1 text-xs hover:bg-muted">
                   <input type="checkbox" checked={checked}

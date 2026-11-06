@@ -5,8 +5,9 @@
 ### Added
 - Full-history incremental annual engineering contribution and ICE-Git/1
   evidence score with Gita-Throughput/1 technical productivity proxy.
-- Selectable side-by-side comparison of two to four contributors, now including
-  all annual fields, score components, twelve-month evidence and JSON export.
+- Selectable side-by-side comparison with no fixed contributor limit,
+  including saved selection, select-all, annual fields, score components,
+  twelve-month evidence and JSON export.
 - Project-specific free-form tags with a searchable multi-target picker,
   atomic assignment and annual-only contributor support.
 - Consolidated project-wide branch and PR views with pagination.

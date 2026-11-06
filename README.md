@@ -57,7 +57,7 @@ technologies and parts of a project that absorb the most work.
 
 - Project-level analytics across multiple repositories
 - Commits, insertions, deletions, net line change, and churn over time
-- Contributor leaderboards, activity trends, focused comparisons of 2–4 selected developers, and custom tag filters
+- Contributor leaderboards, activity trends, focused comparisons with any number of selected developers, and custom tag filters
 - Repository comparisons, branch activity, hot files, and file-type insights
 - Read-only three-dot branch comparisons (ahead/behind and changed files) from
   cached Git mirrors, with a 500-file display limit and truncation notice

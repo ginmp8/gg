@@ -6,7 +6,7 @@ All source code, UI messages and documentation are in English.
 | --- | --- |
 | Complete annual Git analytics and incremental SQLite indexing | [Annual contribution](../ANNUAL-ANALYTICS.md) |
 | Effective contribution and technical productivity evidence scores | [ICE-Git methodology](../ICE-GIT.md) |
-| User-selected side-by-side comparison of two to four contributors | [Contributor comparison](contributor-comparison.md) |
+| User-selected side-by-side comparison of selected contributors without a fixed cap | [Contributor comparison](contributor-comparison.md) |
 | Arbitrary user-created tags and assignment to four kinds of entities | [Custom tags](custom-tags.md) |
 | Project-wide Branches and Pull requests lists with repository labels | [Multi-repository inventories](multi-repository-inventories.md) |
 | Workspace management, appearance, branch views and labels | [Settings](settings.md) |
