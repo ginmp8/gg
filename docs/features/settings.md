@@ -10,6 +10,7 @@ The dedicated **Settings** tab holds:
 - Appearance: light, dark or operating-system mode
 - Saved branch views and folder filters
 - User-defined custom tags and their assignments
+- Manual Git author identity links and on-demand GitHub PR/review snapshot synchronization
 
 The first-run empty-project screen retains Create project for onboarding.
 **Compare** keeps selection and tag filters next to its side-by-side

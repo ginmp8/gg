@@ -94,7 +94,7 @@ indicators are shown as **unavailable** instead of presenting partial counts
 as complete. Deleted users and inaccessible reviews may also lead to
 missing associations.
 
-Associate Git author email aliases with a canonical email and optionally
+Open Settings to associate Git author email aliases with a canonical email and optionally
 a GitHub login in the annual tab. No account matching is guessed solely from
 display names. PR-based metrics require complete snapshots for all selected
 GitHub repositories and explicit login mapping.

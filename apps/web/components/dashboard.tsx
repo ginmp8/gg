@@ -49,6 +49,7 @@ import type {
 
 import { ActivityChart } from "@/components/activity-chart";
 import { AnnualAnalytics } from "@/components/annual-analytics";
+import { AnnualIdentitySettings } from "@/components/annual-identity-settings";
 import { ContributorSideBySide } from "@/components/contributor-side-by-side";
 import { TagSettings } from "@/components/tag-settings";
 import { BranchComparisonPanel } from "@/components/branch-comparison";
@@ -1338,6 +1339,7 @@ export function Dashboard() {
 
               </section>
               {selectedProjectId && <TagSettings projectId={selectedProjectId} />}
+              {selectedProjectId && <AnnualIdentitySettings projectId={selectedProjectId} repositoryId={selectedRepoId} />}
             </Tabs.Content>
           </Tabs.Root>
         )}
