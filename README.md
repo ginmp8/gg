@@ -90,13 +90,13 @@ from [Git Insights Dashboard 0.3.0](https://github.com/ginmp8/git-insights-dashb
   reuses the local results on later refreshes, and reconciles rebased refs
   without claiming incomplete data is complete.
 - **Optional collaboration:** manually map Git author emails and GitHub
-  logins; explicitly request GitHub PR/review snapshots with the separately
-  gated GitHub CLI integration. Unavailable data is not represented as zero.
+  logins; explicitly request GitHub PR/review snapshots through the GitHub
+  CLI (read-only metadata is enabled by default). Missing data is not zero.
 - **Local exports:** annual developer metrics in CSV or JSON.
 
-These are activity and collaboration **indicators, not a productivity
-score**. Code changes, PRs and reviews alone do not demonstrate delivery
-value or engineering quality. See the detailed
+The activity metrics and the two experimental scores are **evidence proxies,
+not objective measures of productivity**. Code changes, PRs and reviews alone
+do not demonstrate delivery value or engineering quality. See the detailed
 [annual methodology, limitations and privacy boundaries](docs/ANNUAL-ANALYTICS.md).
 
 ## Appearance and project lifecycle

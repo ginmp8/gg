@@ -51,8 +51,8 @@ export async function runProcess(
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const safeArgs = args.map(redactSecrets);
 
-  // The CLI is a network-capable process even for apparently local status
-  // commands. Do not start it until the user explicitly opts in.
+  // The GitHub CLI can access the network even for status checks.
+  // Respect explicit offline/metadata-disable switches before starting it.
   if (command === "gh" && !isGitHubMetadataAllowed()) {
     throw new Error(
       "GitHub metadata is disabled by GITA_OFFLINE=1 or GITA_ALLOW_GITHUB_METADATA=0."

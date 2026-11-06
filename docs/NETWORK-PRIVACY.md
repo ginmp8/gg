@@ -3,9 +3,11 @@
 ## Local-first operation and network authorization
 
 Gita stores repository mirrors, commit history and calculated metrics locally.
-The dashboard only talks to Fastify on loopback. **Opening the dashboard,
-reading local repositories or calculating metrics does not initiate Git
-network requests.**
+The dashboard talks to Fastify on loopback. **Opening the dashboard and
+calculating local metrics never execute remote Git clone/fetch.** With GitHub
+metadata enabled by default, selecting a GitHub repository can invoke the
+read-only GitHub CLI authentication status check. The annual PR/review import
+and repository discovery still require their respective explicit buttons.
 
 The existing **Refresh project** and **Refresh repository** actions expressly
 authorize Git to clone or fetch the URLs already registered in the Gita
@@ -13,15 +15,17 @@ database. The user's click is the authorization, as in the
 `git-insights-dashboard` reference. Refresh does not push to repositories,
 and an extra environment variable is **not** required for this normal flow.
 
-GitHub pull-request enrichment is separate: the `gh` CLI is only invoked
-by default when the GitHub CLI is installed/authenticated. Set `GITA_ALLOW_GITHUB_METADATA=0` or `GITA_OFFLINE=1` to disable network metadata reads.
+GitHub metadata access is enabled by default, and `gh` is invoked when an
+eligible provider status/query or explicit import/discovery action needs it.
+Set `GITA_ALLOW_GITHUB_METADATA=0` or `GITA_OFFLINE=1` to disable these reads.
 Core Git metrics continue to work when the CLI is missing or disabled.
+GitHub status is explicitly degraded when `gh` is unavailable or unauthenticated.
 
 ## Network policy
 
 | Setting | Default | Behavior |
 | --- | --- | --- |
-| No flags; no Refresh click | Local only | No Git clone/fetch or GitHub CLI calls |
+| No flags; no Refresh click | Remote Git stays idle | No Git clone/fetch; selecting a GitHub repository may run an authenticated `gh` status check |
 | Click Refresh on registered remote | Allowed | Fetches only the URL registered for that repository |
 | `GITA_ALLOW_REMOTE_GIT=1` | Unset | Also authorizes remote Git for explicitly invoked non-UI workflows |
 | `GITA_ALLOW_REMOTE_GIT=0` | Unset | Denies remote Git, including manual Refresh |

@@ -3,7 +3,7 @@ import { performance } from "node:perf_hooks";
 
 import {
   ANNUAL_GIT_BATCH_SIZE, analyzeAnnualBatch, isGitHubMetadataAllowed,
-  readAnnualReference, runProcess
+  readAnnualReference, runGit, runProcess
 } from "@gita/git-engine";
 import {
   annualCachedHashes, listRepositories, publishAnnualReference, saveAnnualBatch,
@@ -25,8 +25,14 @@ export async function indexAnnualRepository(
     if (metrics.length !== batch.length) throw new Error("Annual diff batch was incomplete.");
     saveAnnualBatch(database, repo.id, metrics);
   }
-  // Only publish a new ref membership after every reachable SHA has indexed
-  // metrics. If Git fails mid-run, the previous complete view stays visible.
+  // Reject concurrent branch movement; an incomplete snapshot must never look current.
+  const liveHead = (await runGit([
+    "-C", repo.cachePath, "rev-parse", "--verify", reference.ref + "^{commit}"
+  ], { timeoutMs: 30_000, allowRemoteGit: false })).stdout.trim();
+  if (liveHead !== reference.head) {
+    throw new Error("The integration reference moved during annual indexing; retry with the current HEAD.");
+  }
+  // Publish membership only after all diffs are available and HEAD is unchanged.
   publishAnnualReference(database, repo.id, reference.ref, reference.head, reference.hashes);
   return {
     repoId: repo.id, ref: reference.ref, head: reference.head,

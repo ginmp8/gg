@@ -63,4 +63,23 @@ describe("annual Git diff metrics", () => {
       fs.rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it("refuses shallow clones rather than reporting a full annual history", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gita-annual-shallow-"));
+    const original = path.join(root, "original");
+    const shallow = path.join(root, "shallow");
+    fs.mkdirSync(original);
+    try {
+      execFileSync("git", ["init", "--initial-branch=main", original], { stdio: "ignore" });
+      fs.writeFileSync(path.join(original, "code.ts"), "const x = 1;\n");
+      commit(original, "initial");
+      fs.writeFileSync(path.join(original, "code.ts"), "const x = 2;\n");
+      commit(original, "second");
+      execFileSync("git", ["clone", "--quiet", "--depth", "1", "file://" + original, shallow]);
+      expect(run(shallow, ["rev-parse", "--is-shallow-repository"])).toBe("true");
+      await expect(readAnnualReference(shallow, "main")).rejects.toThrow(/Shallow Git clone/);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

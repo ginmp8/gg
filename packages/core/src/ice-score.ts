@@ -150,7 +150,9 @@ export function scoreIceCohort(
     person.activeMonths > 0 ? person.boundedDiffCredit / person.activeMonths : 0;
   const materialRateP75 = reference(signals.map(materialPerMonth));
   const diffRateP75 = reference(signals.map(diffPerMonth));
-  const maxMonths = Math.max(0, ...signals.map((person) => person.activeMonths));
+  // Cosmetic-only histories should not suppress the continuity reference for material authors.
+  const maxMonths = Math.max(0, ...signals.filter((person) =>
+    person.materialCommits > 0 && person.boundedDiffCredit > 0).map((person) => person.activeMonths));
   const mergedP75 = canCompareCollaboration ? reference(mapped.map((person) => person.mergedPullRequests ?? 0)) : null;
   const reviewedP75 = canCompareCollaboration ? reference(mapped.map((person) => person.reviewedPullRequests ?? 0)) : null;
   const coreWeight = ICE_GIT_POLICY.deliveryWeight + ICE_GIT_POLICY.technicalWeight +

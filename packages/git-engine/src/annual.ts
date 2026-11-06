@@ -43,6 +43,11 @@ export async function readAnnualReference(
   cachePath: string,
   defaultBranch: string | null
 ): Promise<{ ref: string; head: string; hashes: string[] }> {
+  const shallow = (await runGit(["-C", cachePath, "rev-parse", "--is-shallow-repository"],
+    { timeoutMs: 30_000, allowRemoteGit: false })).stdout.trim();
+  if (shallow !== "false") {
+    throw new Error("Shallow Git clone: fetch the full history before claiming complete annual coverage.");
+  }
   const selected = defaultBranch?.replace(/^refs\/heads\//, "") ?? "";
   const branch = selected || (await runGit(
     ["-C", cachePath, "symbolic-ref", "--quiet", "--short", "HEAD"], { timeoutMs: 30_000 }
