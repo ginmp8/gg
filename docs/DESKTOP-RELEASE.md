@@ -28,6 +28,11 @@ Scores are experimental technical signals rather than objective measures of prod
 Unsigned installers can trigger platform warnings. Graphical testing and signing/notarization
 should precede broad distribution.
 
+The dependency audit baseline (20 advisories, including 2 critical) was
+remediated in the proposed 0.3.0 source; the full audit returned zero on
+[GitHub Actions run 42263753544](https://github.com/ginmp8/gg/actions/runs/42263753544).
+This does not replace platform-specific installer and GUI testing.
+
 See [desktop setup](DESKTOP.md) and [proposed 0.3.0 release notes](../releases/0.3.0.md).
 
 Before publication, align every version manifest, run native packaging and
