@@ -51,3 +51,18 @@ GitHub repository names and URLs are **not** changed by a branch commit. Until
 an explicit repo-level rename, the valid URL remains
 https://github.com/ginmp8/gita. See [NOTICE](../NOTICE.md) and [MIT LICENSE](../LICENSE)
 for origin and copyright attribution.
+
+## Reproducing screenshots
+
+With Node 24 and Chromium installed (`npx playwright install chromium`), start
+the local app using `npm run dev`, then run `npm run screenshots` from a
+second terminal. This captures the real dashboard, Contributors, and Files &
+focus views into the three PNG assets. The script creates a disposable local
+Git fixture with synthetic authors, refreshes it and removes the fixture on
+exit; never use sensitive repositories or hosted GitHub credentials.
+
+The workflow [`screenshots.yml`](../.github/workflows/screenshots.yml) uses
+Ubuntu 24.04 and refreshes the PNGs on `development` when application code or
+the master icon changes. Screenshot-only commits do not retrigger the workflow.
+Review visual changes before promoting the branch; generated screenshots
+demonstrate sample data, not the user's own repositories.
