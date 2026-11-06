@@ -19,6 +19,7 @@ Documentation is written in English. Version 0.2.0 is a development candidate, n
 ## Workflow and security
 
 - [Custom project tags](features/custom-tags.md) and [Settings](features/settings.md)
+- [Local agent CLI](features/local-cli.md) — JSON data source for any local harness
 - [GitHub discovery](GITHUB-DISCOVERY.md)
 - [Network and privacy](NETWORK-PRIVACY.md), [security hardening](SECURITY-HARDENING.md)
 - [Desktop](DESKTOP.md), [build and release](RELEASING-DESKTOP.md) and [desktop release notes](DESKTOP-RELEASE.md)

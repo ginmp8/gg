@@ -52,6 +52,7 @@ import { AnnualAnalytics } from "@/components/annual-analytics";
 import { AnnualIdentitySettings } from "@/components/annual-identity-settings";
 import { ContributorSideBySide } from "@/components/contributor-side-by-side";
 import { TagSettings } from "@/components/tag-settings";
+import { LocalCliSettings } from "@/components/local-cli-settings";
 import { BranchComparisonPanel } from "@/components/branch-comparison";
 import { GitHubRepositoryPicker } from "@/components/github-repository-picker";
 import {
@@ -1340,6 +1341,7 @@ export function Dashboard() {
               </section>
               {selectedProjectId && <TagSettings projectId={selectedProjectId} />}
               {selectedProjectId && <AnnualIdentitySettings projectId={selectedProjectId} repositoryId={selectedRepoId} />}
+              {selectedProjectId && <LocalCliSettings projectId={selectedProjectId} />}
             </Tabs.Content>
           </Tabs.Root>
         )}

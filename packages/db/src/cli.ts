@@ -127,7 +127,7 @@ export function parseGitaCliArgs(argv: string[]): CliOptions {
   for (const option of selected) if (!allowed.has(option)) {
     throw new Error("Option --" + option + " is not supported for " + word + ".");
   }
-  return { command: word, values, lists };
+  return { command: word as Command, values, lists };
 }
 export function gitaCliHelp(): string {
   return [
@@ -210,7 +210,7 @@ export async function executeGitaCli(db: GitaDatabase, argv: string[]): Promise<
   const projectId = required(v.project,"project");
   const project = await getProject(db,projectId);
   if (!project) throw new Error("Project not found: "+projectId);
-  let repoId: string | undefined = v.repo;
+  const repoId: string | undefined = v.repo;
   if (repoId) {
     const repo = await getRepository(db,repoId);
     if (!repo || repo.projectId !== projectId) throw new Error("Repository does not belong to selected project.");

@@ -112,6 +112,16 @@ export function setTagAssignment(
   });
 }
 
+
+export interface LocalDataHealth {
+  ok: boolean;
+  databasePath: string;
+  reposDir: string;
+}
+export function getLocalDataHealth(): Promise<LocalDataHealth> {
+  return apiRequest("/api/health");
+}
+
 export async function getProjects(): Promise<ListResponse<Project>> {
   return apiRequest("/api/projects");
 }
