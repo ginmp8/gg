@@ -1,12 +1,13 @@
 # GG documentation
 
-Documentation is written in English. Version 0.2.0 is a development candidate, not a published release.
+Documentation is written in English. Version 0.3.0 is a proposed release; package and desktop metadata still declare 0.2.0.
 
 ## Start here
 
 - [Project README](../README.md) — installation and product overview
 - [Feature catalog](features/README.md) — features and task-oriented guides
-- [Version 0.2.0](../releases/0.2.0.md) — release candidate notes, upgrade and validation gates
+- [Version 0.3.0](../releases/0.3.0.md) — release proposal, upgrade, risks and outstanding verification
+- [Version 0.2.0](../releases/0.2.0.md) — prior unpublished development candidate
 - [Release history](../releases/README.md) and [changelog](../CHANGELOG.md)
 
 ## Analysis and evidence
