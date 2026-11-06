@@ -449,6 +449,9 @@ export function Dashboard() {
       setRepositoryDialogOpen(false);
       void queryClient.invalidateQueries({ queryKey: ["repositories", selectedProjectId] });
       void queryClient.invalidateQueries({ queryKey: ["summary", selectedProjectId] });
+      // All-repository annual reports include the project's repository roster.
+      // Invalidate cached comparison data when that roster changes.
+      void queryClient.invalidateQueries({ queryKey: ["annual", selectedProjectId] });
     }
   });
 
@@ -1116,7 +1119,11 @@ export function Dashboard() {
               className="grid gap-4 data-[state=inactive]:hidden"
             >
               {selectedProjectId && <ContributorSideBySide
-                projectId={selectedProjectId} repositoryId={selectedRepoId}
+                projectId={selectedProjectId}
+                repositoryId={selectedRepoId}
+                repositories={repositories}
+                onRepositoryChange={setSelectedRepoId}
+                onRunStarted={setActiveRunId}
               />}
             </Tabs.Content>
             <Tabs.Content
