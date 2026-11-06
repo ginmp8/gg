@@ -4,6 +4,8 @@ import type { FileTypeAnalyticsRow } from "@gita/core";
 import * as echarts from "echarts";
 import { useEffect, useMemo, useRef } from "react";
 
+import { bindChartTheme } from "@/lib/chart-theme";
+
 type FileMetric = "files" | "lines" | "commits" | "insertions" | "deletions" | "netLines" | "churn";
 
 export function FileFocusChart({
@@ -67,7 +69,10 @@ export function FileFocusChart({
       ]
     });
 
+    const unbindTheme = bindChartTheme(chart);
+
     return () => {
+      unbindTheme();
       resizeObserver.disconnect();
       chart.dispose();
     };

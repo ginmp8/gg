@@ -74,6 +74,20 @@ export async function createProject(input: {
   });
 }
 
+export interface ProjectDeletionResult {
+  deleted: true;
+  removedMirrors: number;
+  cleanupComplete: boolean;
+  cleanupWarning: string | null;
+}
+
+export async function deleteProjectAndLocalData(projectId: string, confirmName: string): Promise<ProjectDeletionResult> {
+  return apiRequest(`/api/projects/${projectId}`, {
+    method: "DELETE",
+    body: JSON.stringify({ confirmName, deleteLocalData: true })
+  });
+}
+
 export async function getBranchViews(projectId: string): Promise<ListResponse<BranchView>> {
   return apiRequest(`/api/projects/${projectId}/branch-views`);
 }

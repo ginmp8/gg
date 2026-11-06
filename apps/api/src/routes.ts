@@ -17,7 +17,9 @@ import {
   createRefreshRun,
   createRepositoryRecord,
   deleteBranchView,
-  deleteProject,
+  deleteProjectWithLocalData,
+  ProjectDeletionConflict,
+  ProjectDeletionConfirmationError,
   deleteRepository,
   getBranchView,
   getContributorFileTypes,
@@ -94,8 +96,22 @@ export function registerRoutes(server: FastifyInstance, database: GitaDatabase):
 
   server.delete("/api/projects/:projectId", async (request, reply) => {
     const { projectId } = idParamsSchema.parse(request.params);
-    const deleted = await deleteProject(database, requireId(projectId));
-    return deleted ? reply.status(204).send() : reply.status(404).send({ error: "not_found" });
+    const body = z.object({
+      confirmName: z.string().min(1),
+      deleteLocalData: z.literal(true)
+    }).parse(request.body);
+    try {
+      const result = deleteProjectWithLocalData(database, requireId(projectId), body.confirmName);
+      return result ? reply.status(200).send(result) : reply.status(404).send({ error: "not_found" });
+    } catch (error) {
+      if (error instanceof ProjectDeletionConfirmationError) {
+        return reply.status(400).send({ error: "confirmation_required", message: error.message });
+      }
+      if (error instanceof ProjectDeletionConflict) {
+        return reply.status(409).send({ error: "cleanup_conflict", message: error.message });
+      }
+      throw error;
+    }
   });
 
   server.get("/api/projects/:projectId/branch-views", async (request, reply) => {

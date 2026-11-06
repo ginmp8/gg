@@ -50,12 +50,15 @@ import {
   ContributorFileTypeShareChart
 } from "@/components/contributor-comparison-charts";
 import { DataTable } from "@/components/data-table";
+import { ProjectDeleteDialog } from "@/components/project-delete-dialog";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { FileFocusChart, fileTypeLabel } from "@/components/file-focus-chart";
 import {
   createBranchView,
   createProject,
   createRepository,
   deleteBranchView,
+  deleteProjectAndLocalData,
   getBranches,
   getBranchViews,
   getContributorFileTypes,
@@ -162,6 +165,8 @@ export function Dashboard() {
   );
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
+  const [projectDeleteOpen, setProjectDeleteOpen] = useState(false);
+  const [projectDeleteWarning, setProjectDeleteWarning] = useState<string | null>(null);
   const [repositoryDialogOpen, setRepositoryDialogOpen] = useState(false);
   const [branchEditorOpen, setBranchEditorOpen] = useState(false);
   const [branchViewNameDialog, setBranchViewNameDialog] =
@@ -345,6 +350,32 @@ export function Dashboard() {
       setProjectDialogOpen(false);
       setSelectedProjectId(project.id);
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
+    }
+  });
+
+  const deleteProjectMutation = useMutation({
+    mutationFn: ({ id, confirmation }: { id: string; confirmation: string }) =>
+      deleteProjectAndLocalData(id, confirmation),
+    onSuccess(result, { id }) {
+      queryClient.setQueryData<{ items: Project[] }>(["projects"], (data) =>
+        data ? { items: data.items.filter((project) => project.id !== id) } : data
+      );
+      setProjectDeleteOpen(false);
+      setProjectDeleteWarning(result.cleanupWarning);
+      setSelectedProjectId((previous) =>
+        previous === id ? (projects.find((project) => project.id !== id)?.id ?? null) : previous
+      );
+      setSelectedRepoId("all");
+      setSelectedContributorId(null);
+      setActiveRunId(null);
+      try {
+        const stored = readActiveBranchViewStorage();
+        delete stored[id];
+        window.localStorage.setItem(ACTIVE_BRANCH_VIEW_STORAGE_KEY, JSON.stringify(stored));
+      } catch {
+        // A disabled browser preference store must not block project deletion.
+      }
+      void queryClient.invalidateQueries();
     }
   });
 
@@ -628,6 +659,7 @@ export function Dashboard() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {currentRun ? <RefreshStatus run={currentRun} /> : null}
+              <ThemeToggle />
               <ProjectDialog
                 open={projectDialogOpen}
                 onOpenChange={setProjectDialogOpen}
@@ -643,6 +675,13 @@ export function Dashboard() {
                 error={createRepositoryMutation.error}
                 onSubmit={(input) => createRepositoryMutation.mutate(input)}
               />
+              <IconButton
+                label="Delete project and local data"
+                onClick={() => setProjectDeleteOpen(true)}
+                disabled={!selectedProjectId || deleteProjectMutation.isPending}
+              >
+                <Trash2 className="h-4 w-4 text-danger" />
+              </IconButton>
               <IconButton
                 label="Refresh project"
                 onClick={() => refreshProjectMutation.mutate()}
@@ -808,11 +847,24 @@ export function Dashboard() {
             }}
             onConfirm={(viewId) => deleteBranchViewMutation.mutate(viewId)}
           />
+          <ProjectDeleteDialog
+            project={selectedProject}
+            open={projectDeleteOpen}
+            onOpenChange={setProjectDeleteOpen}
+            pending={deleteProjectMutation.isPending}
+            error={deleteProjectMutation.error}
+            onConfirm={(id, confirmation) => deleteProjectMutation.mutate({ id, confirmation })}
+          />
         </div>
       </header>
 
       <div className="mx-auto grid max-w-[1500px] gap-4 px-4 py-4 lg:px-6">
         {projectsQuery.isError ? <ErrorBanner error={projectsQuery.error} /> : null}
+        {projectDeleteWarning ? (
+          <p role="alert" className="rounded-md border border-warning p-3 text-sm text-warning">
+            {projectDeleteWarning}
+          </p>
+        ) : null}
 
         {projects.length === 0 && !projectsQuery.isLoading ? (
           <EmptyProjectState onCreate={() => setProjectDialogOpen(true)} />
@@ -951,7 +1003,7 @@ export function Dashboard() {
               <div className="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(520px,1.1fr)]">
                 <section className="rounded-md border border-border bg-panel p-4 shadow-panel">
                   <SectionTitle
-                    title="Contributor performance"
+                    title="Contributor activity"
                     subtitle="Sorted by selected metric"
                   />
                   {leaderboardQuery.isLoading ? (

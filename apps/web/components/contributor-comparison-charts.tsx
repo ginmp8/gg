@@ -4,6 +4,8 @@ import type { ContributorFileTypeRow, ContributorLeaderboardRow } from "@gita/co
 import * as echarts from "echarts";
 import { useEffect, useMemo, useRef } from "react";
 
+import { bindChartTheme } from "@/lib/chart-theme";
+
 import { fileTypeLabel } from "@/components/file-focus-chart";
 
 type ContributorMetric = "commits" | "churn" | "insertions" | "deletions" | "netLines" | "files" | "lines";
@@ -80,7 +82,10 @@ export function ContributorComparisonChart({
       ]
     });
 
+    const unbindTheme = bindChartTheme(chart);
+
     return () => {
+      unbindTheme();
       resizeObserver.disconnect();
       chart.dispose();
     };
@@ -153,7 +158,10 @@ export function ContributorFileTypeShareChart({
       }))
     });
 
+    const unbindTheme = bindChartTheme(chart);
+
     return () => {
+      unbindTheme();
       resizeObserver.disconnect();
       chart.dispose();
     };

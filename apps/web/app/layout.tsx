@@ -11,7 +11,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: "(function(){try{var x=localStorage.getItem(\"gita.theme\");var t=x===\"light\"||x===\"dark\"?x:(matchMedia(\"(prefers-color-scheme: dark)\").matches?\"dark\":\"light\");document.documentElement.dataset.theme=t;}catch(e){}})();" }} /></head>
       <body>
         <AppProviders>{children}</AppProviders>
       </body>
