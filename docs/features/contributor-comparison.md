@@ -1,9 +1,16 @@
 # Contributor comparison (Gita 0.2.0)
 
 **Compare** is immediately to the right of **Contributors** in the menu.
-Choose a project/repository and analysis year, search, then select two to
-four contributors. User-defined tags narrow the candidates, without
-recalculating the scoring cohort.
+Choose a project/repository and analysis year, then search for contributors.
+The selection is saved per project, repository and year, so changing tabs or
+restarting Gita restores the previous list. The tag and search filters are
+restored with the selected year.
+
+Use **Select all matching** to include everyone visible after applying the
+optional tag and text filters, or toggle it again to remove only that visible
+set. There is no fixed four-person selection limit. Wide comparisons scroll
+horizontally, and the score cards have their own vertical scroll area.
+User-defined tags narrow the candidates without recalculating the scoring cohort.
 
 ## Full available metric inventory
 

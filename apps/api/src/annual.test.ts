@@ -152,4 +152,54 @@ describe("full-year SQLite annual contribution index", () => {
       fs.rmSync(root, { recursive: true, force: true });
     }
   }, 30_000);
+  it("indexes over 500 commits without truncation and reuses every cached SHA", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gita-annual-over-500-"));
+    const original = path.join(root, "original");
+    fs.mkdirSync(original);
+    execFileSync("git", ["init", "--initial-branch=main", original], { stdio:"ignore" });
+    const count = 521;
+    const stream = ["blob", "mark :1", "data 1", "x"];
+    for (let index=0; index<count; index++) {
+      const message = "Annual commit " + index;
+      stream.push("commit refs/heads/main", "mark :" + (index+2),
+        "author Historical Author <history@example.test> 1780000000 +0000",
+        "committer Historical Author <history@example.test> 1780000000 +0000",
+        "data " + Buffer.byteLength(message), message);
+      if (index > 0) stream.push("from :" + (index+1));
+      stream.push("M 100644 :1 history.txt", "");
+    }
+    execFileSync("git", ["-C", original, "fast-import", "--quiet"],
+      { input:stream.join("\n")+"\n", encoding:"utf8" });
+    const db = openGitaDatabase(root);
+    try {
+      const project = await createProject(db, { name:"Large annual history" });
+      const repo = await createRepositoryRecord(db,project.id,{
+        name:"history",fetchUrl:original,localPath:original,
+        provider:"local",githubOwnerRepo:null
+      });
+      await ensureMirrorRepository({
+        fetchUrl:original, cachePath:repo.cachePath, reposRoot:db.paths.reposDir
+      });
+      const first = await indexAnnualRepository(db,repo);
+      expect(first.reachableCommits).toBe(count);
+      expect(first.newCommits).toBe(count);
+      expect(first.reusedCommits).toBe(0);
+      const report = getAnnualReport(db,project.id,2026);
+      expect(report.complete).toBe(true);
+      expect(report.totals.commits).toBe(count);
+      expect(report.coverage[0]?.eligibleCommits).toBe(count);
+      const second = await indexAnnualRepository(db,repo);
+      expect(second.newCommits).toBe(0);
+      expect(second.reusedCommits).toBe(count);
+      const cached = db.sqlite.prepare(
+        "SELECT COUNT(*) AS count FROM annual_commit_metrics WHERE repo_id=?"
+      ).get(repo.id) as {count:number};
+      expect(cached.count).toBe(count);
+    } finally {
+      db.sqlite.close();
+      fs.rmSync(root,{recursive:true,force:true});
+    }
+  }, 60_000);
+
+
 });

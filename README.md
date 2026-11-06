@@ -119,6 +119,24 @@ The application refuses deletion while a refresh is running or if a mirror
 path fails the safety checks. Local deletion is irreversible; back up data
 you want to keep.
 
+## Saved analytics context
+
+On first launch without stored preferences, the dashboard uses **Year to date**,
+from January 1 of the current local year through today. Project, repository,
+metric and date filters persist locally across tabs and app restarts. The
+rolling year-to-date preset updates its end date when Gita is reopened on a
+later day; an explicitly saved custom/all-time range is preserved.
+
+The Compare tab persists the last selected contributors, year, tag and search
+for each project/repository. **Select all matching** includes the complete
+candidate list after current tag and search filters, without a four-person
+cap. Large selections scroll instead of truncating the data. Browser
+preferences use localStorage on the current app origin and are not uploaded.
+
+Annual indexing examines all reachable commits in incremental batches, without
+a 500-commit cutoff. See [annual analytics](docs/ANNUAL-ANALYTICS.md) for coverage
+semantics and caching.
+
 ## Local CLI for agent harnesses
 
 Gita exposes its cached analytics through a local **read-only JSON CLI**

@@ -74,7 +74,12 @@ Use **Index local history** to recalculate missing metrics from already
 cached mirrors without fetching any remote. Normal **Refresh project** also
 indexes the annual data after the legacy analyzer. The legacy Overview and
 other tabs still perform their historical analysis; their processing is not
-yet incremental. The annual feature does not impose a 500-commit cap.
+yet incremental. The annual feature does **not** impose a 500-commit cap.
+A regression indexes 521 commits, checks that all are visible in the annual
+report, and verifies a second index reuses all 521 cached SHAs. The 500-row
+maximum used by unrelated paginated list APIs must not be confused with an
+annual history cap. A fixed internal diff batch size of 120 protects process
+and memory usage without restricting the total history.
 
 The database and mirrors may contain private commit messages, file paths,
 identities and metadata. Protect the local data directory with OS permissions
