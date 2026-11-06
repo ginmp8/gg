@@ -34,6 +34,17 @@ describe("permanent project deletion", () => {
       fs.mkdirSync(otherRepo.cachePath);
       fs.writeFileSync(path.join(otherRepo.cachePath, "keep"), "keep");
 
+      // Annual-index and manual mapping records are project scoped too.
+      const annualState = db.sqlite.prepare(
+        "INSERT INTO annual_ref_state(repo_id,ref,head_sha,indexed_at,eligible_commits,analysis_version) " +
+        "VALUES (?,?,?,?,?,?)"
+      );
+      annualState.run(repo.id, "refs/heads/main", "a".repeat(40), "2026-01-01", 1, 1);
+      annualState.run(otherRepo.id, "refs/heads/main", "b".repeat(40), "2026-01-01", 1, 1);
+      db.sqlite.prepare(
+        "INSERT INTO annual_identity_links(project_id,email,canonical_email,github_login) VALUES (?,?,?,?)"
+      ).run(project.id, "dev@example.test", "dev@example.test", "developer");
+
       const declined = await server.inject({
         method: "DELETE", url: `/api/projects/${project.id}`,
         payload: { confirmName: "incorrect", deleteLocalData: true }
@@ -52,6 +63,15 @@ describe("permanent project deletion", () => {
       expect(fs.existsSync(path.join(original, "keep.txt"))).toBe(true);
       expect(fs.existsSync(otherRepo.cachePath)).toBe(true);
       expect(await getProject(db, other.id)).not.toBeNull();
+      expect((db.sqlite.prepare(
+        "SELECT COUNT(*) AS count FROM annual_ref_state WHERE repo_id = ?"
+      ).get(repo.id) as { count: number }).count).toBe(0);
+      expect((db.sqlite.prepare(
+        "SELECT COUNT(*) AS count FROM annual_ref_state WHERE repo_id = ?"
+      ).get(otherRepo.id) as { count: number }).count).toBe(1);
+      expect((db.sqlite.prepare(
+        "SELECT COUNT(*) AS count FROM annual_identity_links WHERE project_id = ?"
+      ).get(project.id) as { count: number }).count).toBe(0);
     } finally {
       await server.close();
       db.sqlite.close();
