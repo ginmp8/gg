@@ -1,6 +1,6 @@
 "use client";
 
-import type { AnnualContributor, AnnualIdentityLink, AnnualReport } from "@gita/core";
+import type { AnnualIdentityLink } from "@gita/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";

@@ -3,7 +3,13 @@ import type { AnnualContributor, AnnualReport } from "@gita/core";
 /** Prevent spreadsheet formula execution when Git author strings are exported. */
 export function csvCell(value: unknown): string {
   const text = value == null ? "" : String(value);
-  const escaped = /^[\s\u0000-\u001f]*[=+\-@]/.test(text) ? `'${text}` : text;
+  let firstMeaningful = 0;
+  // Excel may ignore leading ASCII whitespace/control characters in a cell.
+  while (firstMeaningful < text.length && text.charCodeAt(firstMeaningful) <= 32) {
+    firstMeaningful++;
+  }
+  const escaped = firstMeaningful < text.length &&
+    "=+-@".includes(text.charAt(firstMeaningful)) ? `'${text}` : text;
   return `"${escaped.replaceAll('"', '""')}"`;
 }
 

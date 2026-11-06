@@ -47,7 +47,7 @@ export async function readAnnualReference(
   const branch = selected || (await runGit(
     ["-C", cachePath, "symbolic-ref", "--quiet", "--short", "HEAD"], { timeoutMs: 30_000 }
   )).stdout.trim().replace(/^refs\/heads\//, "");
-  if (!branch || branch.startsWith("-") || !/^[a-zA-Z0-9_.\/-]+$/.test(branch) || branch.includes("..")) {
+  if (!branch || branch.startsWith("-") || !/^[a-zA-Z0-9_./-]+$/.test(branch) || branch.includes("..")) {
     throw new Error("An explicit, valid integration branch is required for annual analytics.");
   }
   const ref = `refs/heads/${branch}`;
