@@ -123,7 +123,7 @@ export const COMPARISON_METRIC_GROUPS: readonly ComparisonGroup[] = [
       annual("testTouchedRate", "Test-touched commit rate", "Commits touching test files as a share of commits.", "percent"),
       annual("testTouchedCommits", "Commits touching tests", "Commits with test-file activity."),
       derived("materialCommitRate", "Material commit rate", "Material commits divided by total integrated commits.",
-        row => row.person.commits ? (row.evidence?.materialCommits ?? 0) * 100 / row.person.commits : null, "percent"),
+        row => row.evidence && row.person.commits ? row.evidence.materialCommits * 100 / row.person.commits : null, "percent"),
       derived("commitsPerActiveDay", "Commits per active day", "Average integrated commits per active day.",
         row => row.person.activeDays ? row.person.commits / row.person.activeDays : null, "decimal"),
       derived("materialCommitsPerActiveMonth", "Material commits per active month",

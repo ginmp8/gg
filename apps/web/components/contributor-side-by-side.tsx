@@ -1,6 +1,6 @@
 "use client";
 
-import type { AnnualMonthly, AnnualContributor, IceContributorScore } from "@gita/core";
+import type { AnnualMonthly } from "@gita/core";
 import { tagsForTarget } from "@gita/core";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeftRight, Search, X } from "lucide-react";

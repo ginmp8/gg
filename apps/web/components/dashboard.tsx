@@ -797,6 +797,11 @@ export function Dashboard() {
                 label="Contributors"
               />
               <TabTrigger
+                value="compare"
+                icon={<Users className="h-4 w-4" />}
+                label="Compare"
+              />
+              <TabTrigger
                 value="files"
                 icon={<FileCode2 className="h-4 w-4" />}
                 label="Files & focus"
@@ -810,11 +815,6 @@ export function Dashboard() {
                 value="pull-requests"
                 icon={<GitPullRequest className="h-4 w-4" />}
                 label="Pull requests"
-              />
-              <TabTrigger
-                value="compare"
-                icon={<Users className="h-4 w-4" />}
-                label="Compare"
               />
               <TabTrigger
                 value="settings"
