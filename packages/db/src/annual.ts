@@ -194,6 +194,7 @@ interface RepositoryRow {
   name: string;
   default_branch: string | null;
   provider: string;
+  last_refresh_at: string | null;
 }
 interface StateRow {
   ref: string;
@@ -218,7 +219,7 @@ export function getAnnualReport(
     throw new Error("Invalid analytics year.");
   }
   const repositoryRows = database.sqlite.prepare(
-    "SELECT id,name,default_branch,provider FROM repositories WHERE project_id = ? ORDER BY name"
+    "SELECT id,name,default_branch,provider,last_refresh_at FROM repositories WHERE project_id = ? ORDER BY name"
   ).all(projectId) as RepositoryRow[];
   const repos = selectedRepoId
     ? repositoryRows.filter((repo) => repo.id === selectedRepoId)
@@ -264,8 +265,11 @@ export function getAnnualReport(
     const indexedCount = state
       ? (countQuery.get(VERSION, repo.id, state.ref) as { count: number }).count
       : 0;
+    // A Git-only refresh may advance the repository without reindexing annual
+    // metrics. Never present an older snapshot as fully current.
     const complete = Boolean(state &&
-      state.analysis_version === VERSION && indexedCount === state.eligible_commits);
+      state.analysis_version === VERSION && indexedCount === state.eligible_commits &&
+      (!repo.last_refresh_at || state.indexed_at >= repo.last_refresh_at));
     const prState = prQuery.get(repo.id) as { fetchedAt: string; complete: number } | undefined;
     if ((repo.provider === "github" && !prState) || (prState && prState.complete !== 1)) {
       allPrComplete = false;
