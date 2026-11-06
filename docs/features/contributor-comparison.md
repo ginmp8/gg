@@ -1,22 +1,41 @@
-# Side-by-side contributor comparison (0.2.0)
+# Contributor comparison (Gita 0.2.0)
 
-Open **Compare**, choose the project/repository scope and analysis year,
-and select two to four contributors by name/email. Remove a selection or
-clear all. User-created tags can filter eligible contributors.
+**Compare** is immediately to the right of **Contributors** in the menu.
+Choose a project/repository and analysis year, search, then select two to
+four contributors. User-defined tags narrow the candidates, without
+recalculating the scoring cohort.
 
-The comparison places selected people side by side and shows:
-ICE-Git/1 effective contribution, Gita-Throughput/1 productivity proxy,
-GitHub-enhanced contribution when available, material commits, bounded
-diff units, active months/days, substantive commits/rate, code/test churn,
-test touches, PR merges and reviews.
+## Full available metric inventory
 
-The highest numerical value in a row is highlighted for orientation,
-not presented as a determination of the best employee. Scores are
-calculated relative to the full selected integration-branch/year cohort,
-not just the filtered or selected people.
+The comparison shows all available numeric fields of AnnualContributor and
+IceContributorScore, grouped into collapsible sections instead of one
+unmanageable table:
 
-Insufficient cohort size and incomplete annual Git history produce
-unavailable scores (N/A), rather than false zero values.
-Git does not measure task difficulty, code quality, collaboration outside
-GitHub, customer impact or productivity. Read the [scoring methodology](../ICE-GIT.md)
-before using results for any consequential decision.
+- **Scores:** effective contribution (ICE-Git/1), productivity proxy
+  (Gita-Throughput/1), optional combined GitHub score, evidence coverage,
+  and the seven score components (integrated delivery, technical diff,
+  test/docs, GitHub collaboration, delivery/month, diff/month, continuity).
+- **Activity:** integrated/material/substantive/cosmetic/supported commits,
+  active days/months, repositories, first/last activity, canonical email
+  and GitHub login.
+- **Churn and classification:** gross, rename-aware, adjusted and
+  reviewable churn; source, test, docs and generated changes; move and
+  whitespace estimates; moved/pure-move/binary-file counts; bounded
+  diff credit and retained file-evidence samples.
+- **Rates:** substantive/retained-churn/test-touched rates, test touches,
+  material share, commits per active day and technical output per month.
+- **Collaboration:** merged, reviewed and approved pull request counts.
+- **Monthly distribution:** active months, monthly peaks and totals
+  and a twelve-month per-person table for commits, adjusted churn,
+  reviewable churn and test touches.
+
+Definitions accompany each metric. The **Export selected comparison**
+action downloads JSON including full contributor values, score components,
+reference cohorts and available file evidence. File-evidence samples are
+capped; use the [local CLI](local-cli.md) to page raw annual file records.
+
+Unavailable metrics display **N/A**, not zero. The report remains scoped
+to the selected repository/year cohort. Larger churn values are not
+treated as better. The largest score within a row may be highlighted,
+but no score proves individual productivity, difficulty, teamwork or
+customer value. See [ICE-Git methodology](../ICE-GIT.md).

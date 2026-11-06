@@ -1,33 +1,34 @@
-# Custom tags (0.2.0)
+# Custom tags (Gita 0.2.0)
 
-Gita supports arbitrary user-defined tag names and optional group labels. Nothing is preconfigured.
+Every tag name and optional group is created by the user; no predefined
+roles, teams or other categories are seeded.
 
-## Manage
+## Search and assign several targets
 
-Open **Settings → Custom tags** and enter a tag label and optional group.
-Use Edit to rename the tag/group and Delete to remove a tag with its assignments
-after confirmation. Tag deletion does not delete a Git contributor, repository,
-branch or pull request. Tag name/group pairs are unique inside each project
-(case-insensitive).
+Open Settings → Custom tags. Choose or create a tag, select the entity
+type (Contributor, Repository, Branch or Pull request), then open
+**Search and select multiple targets**. Search by name/email/identifier
+directly *inside* the picker, check multiple results, and close with Done.
+Selections remain visible as removable chips even when search results
+change. Finally choose **Assign N selected targets**.
 
-## Assign
+Up to 100 unique targets can be selected per batch. The server applies
+all assignments in one SQLite transaction: a stale/foreign target yields
+HTTP 422 and causes the entire batch to roll back. Repeated assignments
+are idempotent. Removal of existing individual assignments remains possible.
 
-Choose a tag, select Contributor, Repository, Branch or Pull request,
-then search by name, email or identifier. Select a target and assign the tag.
-Current assignments can be removed individually. Up to 100 matching targets
-are returned per search; refine your search for additional targets.
+Contributor search combines the regular commit index with the complete
+annual commit index, applying canonical author email mappings. This
+enables tagging historical contributors even when the shorter commit
+inventory no longer shows them.
 
-The backend verifies target membership in the project before assignments.
-An inaccessible or stale entity is rejected (422), and duplicate tags
-return 409. Contributor keys use normalized Git/canonical author email,
-repository keys use Gita repository IDs, and branch/PR keys are scoped by repository.
+## Tag lifecycle and filtering
 
-## Filter
+Create, edit, or delete any label and optional free-form group; names
+are unique by project/group (case-insensitive). Deleting a tag removes
+its assignments, not the underlying Git data.
 
-The Compare view includes a user-defined tag filter for the selectable
-contributor list. It narrows displayed candidates without changing the
-ICE-Git/1 score reference cohort or reinterpreting scores.
-
-Project deletion cascades to its tags and assignments. Data lives only in
-the local SQLite tables project_tags and project_tag_assignments, added by
-the 0.2.0 migration. No tag data is uploaded to GitHub.
+Compare offers filtering by a user-created contributor tag. Filtering
+candidate people does not modify the reference cohort for contribution
+scores. Everything is saved in the local project_tags and
+project_tag_assignments SQLite tables. No tag data is uploaded to GitHub.
