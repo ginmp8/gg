@@ -6,19 +6,19 @@ import { useState } from "react";
 import { getLocalDataHealth } from "@/lib/api";
 
 const examples = [
-  { id: "catalog", label: "Available commands", build: () => "npm run cli -- catalog" },
-  { id: "projects", label: "List projects", build: () => "npm run cli -- projects" },
-  { id: "summary", label: "Project overview", build: (project: string) => "npm run cli -- summary --project " + project },
+  { id: "catalog", label: "Available commands", build: () => "npm --silent run cli -- catalog" },
+  { id: "projects", label: "List projects", build: () => "npm --silent run cli -- projects" },
+  { id: "summary", label: "Project overview", build: (project: string) => "npm --silent run cli -- summary --project " + project },
   { id: "scores", label: "All contributor scores", build: (project: string) =>
-    "npm run cli -- scores --project " + project + " --year " + new Date().getFullYear() },
+    "npm --silent run cli -- scores --project " + project + " --year " + new Date().getFullYear() },
   { id: "annual", label: "All annual metrics", build: (project: string) =>
-    "npm run cli -- annual --project " + project + " --year " + new Date().getFullYear() },
+    "npm --silent run cli -- annual --project " + project + " --year " + new Date().getFullYear() },
   { id: "contributors", label: "Contributors", build: (project: string) =>
-    "npm run cli -- contributors --project " + project + " --limit 100" },
+    "npm --silent run cli -- contributors --project " + project + " --limit 100" },
   { id: "commits", label: "Raw commit records", build: () =>
-    "npm run cli -- table --table commits --limit 100" },
+    "npm --silent run cli -- table --table commits --limit 100" },
   { id: "filechanges", label: "Annual file-diff evidence", build: () =>
-    "npm run cli -- table --table annual_file_changes --limit 100" }
+    "npm --silent run cli -- table --table annual_file_changes --limit 100" }
 ];
 
 export function LocalCliSettings({ projectId }: { projectId: string }) {
@@ -83,7 +83,7 @@ export function LocalCliSettings({ projectId }: { projectId: string }) {
           when the CLI must read another Gita data directory, such as the desktop application's AppData.
           The CLI opens existing SQLite data strictly read-only; it never triggers remote Git refresh,
           indexing, migrations or background tasks.</p>
-        <p>Use <code className="text-foreground">npm run cli -- catalog</code> to discover
+        <p>Use <code className="text-foreground">npm --silent run cli -- catalog</code> to discover
           all analytics commands and raw, paginated datasets. The CLI is currently shipped with the
           source checkout, not as an installed system-wide binary or native MCP server.</p>
       </div>

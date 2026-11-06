@@ -39,6 +39,11 @@ jobs:
       - name: Test
         run: npm run test
 
+      - name: Verify local CLI JSON contract
+        run: |
+          npm --silent run cli -- catalog > "$RUNNER_TEMP/gita-cli-catalog.json"
+          node -e "const fs=require('node:fs');const doc=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/gita-cli-catalog.json','utf8'));if(!doc.commands.some(c=>c.name==='scores')||!doc.rawTables.includes('annual_file_changes'))process.exit(1)"
+
       - name: Build
         run: npm run build
 

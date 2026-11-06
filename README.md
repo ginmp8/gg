@@ -126,11 +126,11 @@ for any trusted coding harness able to execute a subprocess. It does not
 require an HTTP API server, authentication, network access or a separate
 MCP installation.
 
-    npm run cli -- catalog
-    npm run cli -- projects
-    npm run cli -- scores --project PROJECT_ID --year 2026
-    npm run cli -- annual --project PROJECT_ID --year 2026
-    npm run cli -- table --table annual_file_changes --limit 100
+    npm --silent run cli -- catalog
+    npm --silent run cli -- projects
+    npm --silent run cli -- scores --project PROJECT_ID --year 2026
+    npm --silent run cli -- annual --project PROJECT_ID --year 2026
+    npm --silent run cli -- table --table annual_file_changes --limit 100
 
 The CLI includes project summaries, full annual scores and score components,
 contributor and repository analytics, branch/PR inventories, tags, and

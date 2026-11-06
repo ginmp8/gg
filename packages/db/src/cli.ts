@@ -132,14 +132,14 @@ export function parseGitaCliArgs(argv: string[]): CliOptions {
 export function gitaCliHelp(): string {
   return [
     "Gita local read-only data CLI (0.2.0)",
-    "Usage: npm run cli -- <command> [--option value]",
+    "Usage: npm --silent run cli -- <command> [--option value]",
     "Commands: " + COMMANDS.join(", "),
     "Examples:",
-    "  npm run cli -- projects",
-    "  npm run cli -- scores --project PROJECT_ID --year 2026",
-    "  npm run cli -- contributors --project PROJECT_ID --limit 100",
-    "  npm run cli -- table --table annual_file_changes --limit 100",
-    "  npm run cli -- catalog",
+    "  npm --silent run cli -- projects",
+    "  npm --silent run cli -- scores --project PROJECT_ID --year 2026",
+    "  npm --silent run cli -- contributors --project PROJECT_ID --limit 100",
+    "  npm --silent run cli -- table --table annual_file_changes --limit 100",
+    "  npm --silent run cli -- catalog",
     "All successful queries print JSON to stdout. Errors print JSON to stderr.",
     "Data source: existing GITA_DATA_DIR/gita.sqlite or .gita/gita.sqlite. No HTTP/auth/network."
   ].join("\n");
@@ -150,10 +150,10 @@ export function gitaCliCatalog(): unknown {
     rawTables: RAW_TABLES,
     options: FLAGS.map(name => "--" + name),
     examples: [
-      "npm run cli -- projects",
-      "npm run cli -- annual --project PROJECT_ID --year 2026",
-      "npm run cli -- scores --project PROJECT_ID --year 2026",
-      "npm run cli -- table --table annual_file_changes --limit 100 --offset 0"
+      "npm --silent run cli -- projects",
+      "npm --silent run cli -- annual --project PROJECT_ID --year 2026",
+      "npm --silent run cli -- scores --project PROJECT_ID --year 2026",
+      "npm --silent run cli -- table --table annual_file_changes --limit 100 --offset 0"
     ],
     authentication: "none",
     network: "disabled",

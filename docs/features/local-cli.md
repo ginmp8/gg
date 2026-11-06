@@ -19,23 +19,23 @@ contact GitHub, update tags or start a background worker.
 
 From the Gita source checkout:
 
-    npm run cli -- catalog
-    npm run cli -- projects
-    npm run cli -- repositories --project PROJECT_ID
-    npm run cli -- summary --project PROJECT_ID
-    npm run cli -- scores --project PROJECT_ID --year 2026
-    npm run cli -- annual --project PROJECT_ID --year 2026
-    npm run cli -- contributors --project PROJECT_ID --limit 100
-    npm run cli -- activity --project PROJECT_ID --from 2026-01-01 --to 2026-12-31
-    npm run cli -- file-types --project PROJECT_ID
-    npm run cli -- hot-files --project PROJECT_ID --limit 100
-    npm run cli -- contributor-file-types --project PROJECT_ID
-    npm run cli -- repository-comparison --project PROJECT_ID
-    npm run cli -- branches --project PROJECT_ID
-    npm run cli -- pull-requests --project PROJECT_ID
-    npm run cli -- tags --project PROJECT_ID
-    npm run cli -- branch-views --project PROJECT_ID
-    npm run cli -- annual-identities --project PROJECT_ID
+    npm --silent run cli -- catalog
+    npm --silent run cli -- projects
+    npm --silent run cli -- repositories --project PROJECT_ID
+    npm --silent run cli -- summary --project PROJECT_ID
+    npm --silent run cli -- scores --project PROJECT_ID --year 2026
+    npm --silent run cli -- annual --project PROJECT_ID --year 2026
+    npm --silent run cli -- contributors --project PROJECT_ID --limit 100
+    npm --silent run cli -- activity --project PROJECT_ID --from 2026-01-01 --to 2026-12-31
+    npm --silent run cli -- file-types --project PROJECT_ID
+    npm --silent run cli -- hot-files --project PROJECT_ID --limit 100
+    npm --silent run cli -- contributor-file-types --project PROJECT_ID
+    npm --silent run cli -- repository-comparison --project PROJECT_ID
+    npm --silent run cli -- branches --project PROJECT_ID
+    npm --silent run cli -- pull-requests --project PROJECT_ID
+    npm --silent run cli -- tags --project PROJECT_ID
+    npm --silent run cli -- branch-views --project PROJECT_ID
+    npm --silent run cli -- annual-identities --project PROJECT_ID
 
 Use --repo REPOSITORY_ID to restrict supported commands to a repository
 in the specified project. Additional metrics filters include --contributor,
@@ -58,11 +58,11 @@ The table command allows reading all existing SQLite datasets through a
 compile-time allowlist of table names and parameterized pagination.
 No arbitrary user SQL is executed.
 
-    npm run cli -- table --table commits --limit 100 --offset 0
-    npm run cli -- table --table commit_file_stats --limit 100 --offset 0
-    npm run cli -- table --table annual_commit_metrics --limit 100
-    npm run cli -- table --table annual_file_changes --limit 100
-    npm run cli -- table --table project_tag_assignments --limit 100
+    npm --silent run cli -- table --table commits --limit 100 --offset 0
+    npm --silent run cli -- table --table commit_file_stats --limit 100 --offset 0
+    npm --silent run cli -- table --table annual_commit_metrics --limit 100
+    npm --silent run cli -- table --table annual_file_changes --limit 100
+    npm --silent run cli -- table --table project_tag_assignments --limit 100
 
 Use the catalog command for all available tables and commands. Each
 page contains items, total, limit and offset. Limit is bounded to
@@ -76,12 +76,12 @@ Gita source workspace's .gita/gita.sqlite.
 
 Linux/macOS:
 
-    GITA_DATA_DIR=/path/to/gita-data npm run cli -- projects
+    GITA_DATA_DIR=/path/to/gita-data npm --silent run cli -- projects
 
 Windows PowerShell:
 
     $env:GITA_DATA_DIR = 'C:\path\to\gita-data'
-    npm run cli -- projects
+    npm --silent run cli -- projects
 
 ## Harness integration
 
@@ -96,6 +96,6 @@ local metadata, run it only from trusted harnesses under your OS account.
 Do not expose it to remote or untrusted executors. OS file permissions
 protect the underlying data; the CLI does not add authentication.
 
-For troubleshooting, run npm run cli -- catalog (works without a database).
-Then run npm run cli -- projects after the Gita app has created a local
+For troubleshooting, run npm --silent run cli -- catalog (works without a database).
+Then run npm --silent run cli -- projects after the Gita app has created a local
 project. Point GITA_DATA_DIR to the correct folder if the DB is elsewhere.
