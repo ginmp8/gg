@@ -270,12 +270,16 @@ export async function updateRepository(
   });
 }
 
-export async function refreshProject(projectId: string): Promise<RefreshRun> {
-  return apiRequest(`/api/projects/${projectId}/refresh`, { method: "POST" });
+export async function refreshProject(projectId: string, indexAnnual = true): Promise<RefreshRun> {
+  return apiRequest(`/api/projects/${projectId}/refresh`, {
+    method: "POST", body: JSON.stringify({ indexAnnual })
+  });
 }
 
-export async function refreshRepository(repoId: string): Promise<RefreshRun> {
-  return apiRequest(`/api/repositories/${repoId}/refresh`, { method: "POST" });
+export async function refreshRepository(repoId: string, indexAnnual = true): Promise<RefreshRun> {
+  return apiRequest(`/api/repositories/${repoId}/refresh`, {
+    method: "POST", body: JSON.stringify({ indexAnnual })
+  });
 }
 
 export async function getRefreshRun(runId: string): Promise<RefreshRun> {

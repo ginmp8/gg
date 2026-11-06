@@ -1,11 +1,12 @@
 "use client";
 
-import type { AnnualMonthly } from "@gg/core";
+import type { AnnualMonthly, Repository } from "@gg/core";
 import { tagsForTarget } from "@gg/core";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeftRight, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getAnnualReport, getProjectTags } from "@/lib/api";
+import { ContributorRanking } from "@/components/contributor-ranking";
 import { COMPARISON_METRIC_GROUPS, formatComparisonValue, type CompareRow } from "@/lib/contributor-comparison-metrics";
 import { downloadLocalReport } from "@/lib/annual-export";
 import {
@@ -19,8 +20,13 @@ function textNumber(value: number | null | undefined, fraction = 0): string {
 }
 
 export function ContributorSideBySide({
-  projectId, repositoryId
-}: { projectId: string; repositoryId: string }) {
+  projectId, repositoryId, repositories, onRepositoryChange
+}: {
+  projectId: string;
+  repositoryId: string;
+  repositories: Repository[];
+  onRepositoryChange: (repositoryId: string) => void;
+}) {
   // Radix tabs may unmount inactive panels. Keep each repository's last selections
   // and analysis year in browser storage, with distinct selections for each year.
   const context = projectId + "\u0000" + repositoryId;
@@ -28,6 +34,7 @@ export function ContributorSideBySide({
     defaultComparisonPreferences(new Date().getFullYear()));
   const [restoredContext, setRestoredContext] = useState<string | null>(null);
   const selectAllRef = useRef<HTMLInputElement>(null);
+  const [viewMode, setViewMode] = useState<"executive" | "detailed">("executive");
   useEffect(() => {
     setPreferences(readComparisonPreferences(projectId, repositoryId, new Date().getFullYear()));
     setRestoredContext(context);
@@ -58,6 +65,8 @@ export function ContributorSideBySide({
     queryFn: () => getProjectTags(projectId)
   });
   const data = annual.data;
+  const incompleteRepositories = data?.coverage.filter(item => !item.complete) ?? [];
+  const indexedRepositories = data?.coverage.filter(item => item.complete).length ?? 0;
   const scoreByEmail = useMemo(() =>
     new Map((data?.evidenceScores.contributors ?? []).map(row => [row.email, row])), [data]
   );
@@ -90,11 +99,12 @@ export function ContributorSideBySide({
   }, [data, scoreByEmail, selected, selectable]);
 
   const selectedEmails = useMemo(() => new Set(selected), [selected]);
+  const visibleEmails = useMemo(() => new Set(people.map(person => person.primaryEmail)), [people]);
   const allMatching = people.length > 0 && people.every(person => selectedEmails.has(person.primaryEmail));
   const someMatching = people.some(person => selectedEmails.has(person.primaryEmail));
   useEffect(() => {
     if (selectAllRef.current) selectAllRef.current.indeterminate = someMatching && !allMatching;
-  }, [allMatching, someMatching]);
+  }, [allMatching, someMatching, viewMode]);
   function choose(email: string): void {
     setSelected(previous => previous.includes(email)
       ? previous.filter(item => item !== email) : [...previous, email]);
@@ -133,23 +143,68 @@ export function ContributorSideBySide({
             <h2 className="text-xl font-semibold">Compare contributors</h2>
           </div>
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-            Select any number of contributors to compare their scores and evidence side by side.
-            Tags filter available people without changing score-calculation cohorts.
+            Understand overall and per-metric rankings at a glance, or switch to detailed
+            evidence for the full side-by-side analysis. Rankings remain cohort-relative.
           </p>
         </div>
-        <label className="flex items-center gap-2 text-sm">Analysis year
-          <input aria-label="Comparison year" type="number" min={1970} max={2100}
-            className="h-9 w-24 rounded border border-border bg-background px-2 tabular-nums"
-            value={year} onChange={event => setPreferences(p => ({ ...p, year: Number(event.target.value) }))} />
-        </label>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="grid gap-1 text-xs">Repository scope
+            <select aria-label="Comparison repository scope" value={repositoryId}
+              onChange={event => onRepositoryChange(event.target.value)}
+              className="h-9 min-w-48 max-w-full rounded border border-border bg-background px-2 text-sm">
+              <option value="all">All repositories ({repositories.length})</option>
+              {repositories.map(repo => (
+                <option key={repo.id} value={repo.id}>{repo.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-xs">Analysis year
+            <input aria-label="Comparison year" type="number" min={1970} max={2100}
+              className="h-9 w-24 rounded border border-border bg-background px-2 text-sm tabular-nums"
+              value={year} onChange={event => setPreferences(p => ({ ...p, year: Number(event.target.value) }))} />
+          </label>
+        </div>
       </div>
       {!validYear && <p role="alert" className="text-sm text-danger">Choose a valid year.</p>}
       {annual.isError && <p role="alert" className="text-sm text-danger">{annual.error.message}</p>}
       {tags.isError && <p role="alert" className="text-sm text-danger">{tags.error.message}</p>}
       {annual.isLoading && <p role="status" className="text-sm text-muted-foreground">Loading local annual metrics…</p>}
-      {data && !data.complete && <p role="status" className="rounded border border-warning/60 p-3 text-sm text-warning">
-        Annual history is not fully indexed. Scores are unavailable until indexing is complete.
+      {data && <p role="status" className="text-sm text-muted-foreground">
+        {data.contributors.length} contributors with commits in {year} across {data.coverage.length} selected
+        {data.coverage.length === 1 ? " repository" : " repositories"}.
+        {" "}{indexedRepositories}/{data.coverage.length} repository histories fully indexed.
       </p>}
+      {data && incompleteRepositories.length > 0 && (
+        <div role="status" className="grid gap-3 rounded border border-warning/60 p-3 text-sm">
+          <p>
+            Contributor results are incomplete. Missing or incomplete annual history:
+            {" "}{incompleteRepositories.map(item => item.repositoryName).join(", ")}.
+            Other repositories may already have contributors available, but missing history
+            is not counted as zero.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Open Settings → Data synchronization to index cached history, or fetch
+            missing repositories before comparing contributors.
+          </p>
+        </div>
+      )}
+      <div role="group" aria-label="Comparison view" className="inline-flex w-fit gap-1 rounded-lg border border-border bg-muted p-1 text-sm">
+        <button type="button" aria-pressed={viewMode === "executive"} onClick={() => setViewMode("executive")}
+          className={"rounded-md px-4 py-2 " + (viewMode === "executive" ? "bg-panel font-semibold text-foreground" : "text-muted-foreground hover:text-foreground")}>
+          Executive ranking
+        </button>
+        <button type="button" aria-pressed={viewMode === "detailed"} onClick={() => setViewMode("detailed")}
+          className={"rounded-md px-4 py-2 " + (viewMode === "detailed" ? "bg-panel font-semibold text-foreground" : "text-muted-foreground hover:text-foreground")}>
+          Detailed evidence
+        </button>
+      </div>
+      {viewMode === "executive" && data && (
+        <ContributorRanking report={data} visibleEmails={visibleEmails}
+          selectedEmails={selectedEmails} onToggle={choose}
+          onCompareAllRepositories={repositoryId !== "all" && repositories.length > 1
+            ? () => onRepositoryChange("all") : undefined} />
+      )}
+      {viewMode === "detailed" && <>
       <div className="grid gap-3 rounded-md border border-border bg-panel p-4 lg:grid-cols-[200px_minmax(0,1fr)_auto]">
         <label className="grid gap-1 text-xs">Filter by custom tag
           <select aria-label="Filter contributors by tag" value={tagId}
@@ -360,6 +415,7 @@ export function ContributorSideBySide({
           </p>
         </>
       )}
+      </>}
     </section>
   );
 }

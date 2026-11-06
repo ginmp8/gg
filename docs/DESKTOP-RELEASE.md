@@ -1,12 +1,12 @@
-# GG Desktop 0.2.0 — release candidate
+# GG Desktop 0.3.0 — proposed release
 
-**Status:** candidate on development only. No v0.2.0 tag, installer publication or GitHub Release has been created.
+**Status:** documentation proposal only. Package and desktop version metadata still declare 0.2.0. No v0.3.0 tag, installer publication, or GitHub Release is claimed.
 
 ## New capabilities
 
 - Full-history annual contribution analytics, incremental local SQLite indexing and ICE-Git/1 contribution evidence.
 - Experimental GG-Throughput/1 technical productivity proxy; traceable per-developer diff and commit samples.
-- Compare two to four selected contributors side by side with user-created tag filtering.
+- Compare any number of contributors side by side, with saved selections, filtered select-all, and user-created tags.
 - Project-wide branch and PR inventories with repository source columns and pagination.
 - User-defined custom tags and optional groups, assignable to contributors, repos, branches and pull requests.
 - Dedicated Settings tab for project management, refresh, saved branch views, labels and appearance.
@@ -21,10 +21,19 @@
 
 ## Upgrade and validation
 
-Version 0.2.0 adds additive project_tags and project_tag_assignments SQLite tables.
+The consolidated candidate includes additive annual analytics and custom-tag
+SQLite tables; these features already existed in the unpublished 0.2.0 candidate.
 Back up the GG data directory before upgrading. No analyzed Git source repository is modified.
 Scores are experimental technical signals rather than objective measures of productivity.
 Unsigned installers can trigger platform warnings. Graphical testing and signing/notarization
 should precede broad distribution.
 
-See [desktop setup](DESKTOP.md) and [version 0.2.0 release notes](../releases/0.2.0.md).
+The dependency audit baseline (20 advisories, including 2 critical) was
+remediated in the proposed 0.3.0 source; the full audit returned zero on
+[GitHub Actions run 42263753544](https://github.com/ginmp8/gg/actions/runs/42263753544).
+This does not replace platform-specific installer and GUI testing.
+
+See [desktop setup](DESKTOP.md) and [proposed 0.3.0 release notes](../releases/0.3.0.md).
+
+Before publication, align every version manifest, run native packaging and
+GUI smoke tests, review the full dependency audit and approve the release.

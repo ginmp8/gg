@@ -14,19 +14,25 @@ import {
   type GGDatabase
 } from "@gg/db";
 
-export function enqueueRepositoryRefresh(database: GGDatabase, runId: string, repoId: string): void {
+export function enqueueRepositoryRefresh(
+  database: GGDatabase, runId: string, repoId: string, indexAnnual = true
+): void {
   setTimeout(() => {
-    void refreshRepositoryRun(database, runId, repoId);
+    void refreshRepositoryRun(database, runId, repoId, undefined, indexAnnual);
   }, 0);
 }
 
-export function enqueueProjectRefresh(database: GGDatabase, runId: string, projectId: string): void {
+export function enqueueProjectRefresh(
+  database: GGDatabase, runId: string, projectId: string, indexAnnual = true
+): void {
   setTimeout(() => {
-    void refreshProjectRun(database, runId, projectId);
+    void refreshProjectRun(database, runId, projectId, indexAnnual);
   }, 0);
 }
 
-async function refreshProjectRun(database: GGDatabase, runId: string, projectId: string): Promise<void> {
+async function refreshProjectRun(
+  database: GGDatabase, runId: string, projectId: string, indexAnnual: boolean
+): Promise<void> {
   const repos = await listRepositories(database, projectId);
   await updateRefreshRun(database, runId, {
     status: "running",
@@ -58,7 +64,7 @@ async function refreshProjectRun(database: GGDatabase, runId: string, projectId:
         currentStep: progress.currentStep,
         currentRepositoryName: repo.name
       });
-    });
+    }, indexAnnual);
     const completed = await getRefreshRun(database, childRun.id);
     if (completed?.status === "failed") {
       failures.push(`${repo.name}: ${completed.errorMessage ?? "unknown error"}`);
@@ -90,7 +96,8 @@ async function refreshRepositoryRun(
   database: GGDatabase,
   runId: string,
   repoId: string,
-  onProgress?: (progress: RepositoryRefreshProgress) => Promise<void>
+  onProgress?: (progress: RepositoryRefreshProgress) => Promise<void>,
+  indexAnnual = true
 ): Promise<void> {
   const repo = await getRepositoryWithProviderDetails(database, repoId);
   if (!repo) {
@@ -139,12 +146,14 @@ async function refreshRepositoryRun(
     const analysis = await analyzeRepository(repo.cachePath, repo.defaultBranch);
     analysisMs = Math.round(performance.now() - analysisStart);
     storeRepositoryAnalysis(database, repo, analysis);
-    await updateRefreshRun(database, runId, {
-      currentStep: "Indexing annual contribution incrementally",
-      currentRepositoryName: repo.name
-    });
-    await onProgress?.({ currentStep: "Indexing annual contribution incrementally" });
-    await indexAnnualRepository(database, repo);
+    if (indexAnnual) {
+      await updateRefreshRun(database, runId, {
+        currentStep: "Indexing annual contribution incrementally",
+        currentRepositoryName: repo.name
+      });
+      await onProgress?.({ currentStep: "Indexing annual contribution incrementally" });
+      await indexAnnualRepository(database, repo);
+    }
     const githubOwnerRepo = repo.provider === "github" ? repo.githubOwnerRepo : null;
     const shouldFetchProvider = Boolean(githubOwnerRepo);
     await updateRefreshRun(database, runId, {

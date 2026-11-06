@@ -460,13 +460,18 @@ export function registerRoutes(server: FastifyInstance, database: GGDatabase): v
       return reply.status(404).send({ error: "not_found" });
     }
 
+    // Existing clients continue to refresh Git and index annual metrics by default.
+    // Settings may request a Git-only refresh, leaving local annual snapshots stale.
+    const { indexAnnual = true } = z.object({
+      indexAnnual: z.boolean().optional()
+    }).parse(request.body ?? {});
     const run = await createRefreshRun(database, {
       projectId: project.id,
       repositoryId: null,
       scope: "project",
       status: "queued"
     });
-    enqueueProjectRefresh(database, run.id, project.id);
+    enqueueProjectRefresh(database, run.id, project.id, indexAnnual);
     return reply.status(202).send(run);
   });
 
@@ -477,13 +482,16 @@ export function registerRoutes(server: FastifyInstance, database: GGDatabase): v
       return reply.status(404).send({ error: "not_found" });
     }
 
+    const { indexAnnual = true } = z.object({
+      indexAnnual: z.boolean().optional()
+    }).parse(request.body ?? {});
     const run = await createRefreshRun(database, {
       projectId: repository.projectId,
       repositoryId: repository.id,
       scope: "repository",
       status: "queued"
     });
-    enqueueRepositoryRefresh(database, run.id, repository.id);
+    enqueueRepositoryRefresh(database, run.id, repository.id, indexAnnual);
     return reply.status(202).send(run);
   });
 

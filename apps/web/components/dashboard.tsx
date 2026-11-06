@@ -87,6 +87,7 @@ import {
   getPullRequests,
   getRefreshRun,
   getRepositories,
+  indexAnnualProject,
   refreshProject,
   refreshRepository,
   updateBranchView,
@@ -110,6 +111,7 @@ type BranchViewNameDialogState = {
 const CUSTOM_BRANCH_VIEW_ID = "custom";
 const ACTIVE_BRANCH_VIEW_STORAGE_KEY = "gg.activeBranchViewByProject";
 const DATE_RANGE_STORAGE_KEY = "gg.dashboardDateRange";
+type SyncMode = "repositories" | "metrics" | "both";
 
 function getStoredActiveBranchViewId(projectId: string): string | null {
   return readActiveBranchViewStorage()[projectId] ?? null;
@@ -184,6 +186,7 @@ export function Dashboard() {
     null
   );
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
+  const lastRefreshedRunId = useRef<string | null>(null);
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
   const [projectDeleteOpen, setProjectDeleteOpen] = useState(false);
   const [projectDeleteWarning, setProjectDeleteWarning] = useState<string | null>(null);
@@ -395,16 +398,25 @@ export function Dashboard() {
     queryKey: ["refresh-run", activeRunId],
     queryFn: () => getRefreshRun(requireSelected(activeRunId)),
     enabled: Boolean(activeRunId),
-    refetchInterval: 1000
+    refetchInterval: query => {
+      const status = query.state.data?.status;
+      return status === "succeeded" || status === "failed" ? false : 1000;
+    }
   });
 
   useEffect(() => {
     const run = refreshRunQuery.data;
-    if (!run || (run.status !== "succeeded" && run.status !== "failed")) {
+    if (!run || (run.status !== "succeeded" && run.status !== "failed") ||
+        lastRefreshedRunId.current === run.id) {
       return;
     }
-
-    void queryClient.invalidateQueries();
+    lastRefreshedRunId.current = run.id;
+    // Refetch both active and inactive tab queries after the worker finishes.
+    // A single terminal transition must not start another polling/refetch loop.
+    void queryClient.invalidateQueries({
+      predicate: query => query.queryKey[0] !== "refresh-run",
+      refetchType: "all"
+    });
   }, [queryClient, refreshRunQuery.data]);
 
   const createProjectMutation = useMutation({
@@ -449,18 +461,21 @@ export function Dashboard() {
       setRepositoryDialogOpen(false);
       void queryClient.invalidateQueries({ queryKey: ["repositories", selectedProjectId] });
       void queryClient.invalidateQueries({ queryKey: ["summary", selectedProjectId] });
+      // All-repository annual reports include the project's repository roster.
+      // Invalidate cached comparison data when that roster changes.
+      void queryClient.invalidateQueries({ queryKey: ["annual", selectedProjectId] });
     }
   });
 
-  const refreshProjectMutation = useMutation({
-    mutationFn: () => refreshProject(requireSelected(selectedProjectId)),
-    onSuccess(run) {
-      setActiveRunId(run.id);
-    }
-  });
-
-  const refreshRepositoryMutation = useMutation({
-    mutationFn: () => refreshRepository(selectedRepoId),
+  const syncMutation = useMutation({
+    mutationFn: (mode: SyncMode) => {
+      const projectId = requireSelected(selectedProjectId);
+      if (mode === "metrics") return indexAnnualProject(projectId);
+      const includeAnnualMetrics = mode === "both";
+      return selectedRepoId === "all"
+        ? refreshProject(projectId, includeAnnualMetrics)
+        : refreshRepository(selectedRepoId, includeAnnualMetrics);
+    },
     onSuccess(run) {
       setActiveRunId(run.id);
     }
@@ -552,6 +567,9 @@ export function Dashboard() {
     ? projectPullRequestsQuery.data?.providerState ?? null
     : pullRequestsQuery.data?.providerState ?? null;
   const currentRun = refreshRunQuery.data ?? null;
+  const syncBusy = syncMutation.isPending ||
+    (Boolean(activeRunId) && (refreshRunQuery.isPending ||
+      currentRun?.status === "running" || currentRun?.status === "queued"));
   const repositoryBranchSettings = repositories.map((repo, index) =>
     toRepositoryBranchSetting(repo, repositoryBranchesQueries[index]?.data?.items ?? [])
   );
@@ -931,7 +949,6 @@ export function Dashboard() {
                 <AnnualAnalytics
                   projectId={selectedProjectId}
                   repositoryId={selectedRepoId}
-                  onRunStarted={setActiveRunId}
                 />
               ) : null}
             </Tabs.Content>
@@ -1116,7 +1133,10 @@ export function Dashboard() {
               className="grid gap-4 data-[state=inactive]:hidden"
             >
               {selectedProjectId && <ContributorSideBySide
-                projectId={selectedProjectId} repositoryId={selectedRepoId}
+                projectId={selectedProjectId}
+                repositoryId={selectedRepoId}
+                repositories={repositories}
+                onRepositoryChange={setSelectedRepoId}
               />}
             </Tabs.Content>
             <Tabs.Content
@@ -1281,8 +1301,9 @@ export function Dashboard() {
                 projectId={selectedProjectId}
                 repositories={repositories}
                 onImported={() => {
-                  void queryClient.invalidateQueries({ queryKey: ["repositories", selectedProjectId] });
-                  void queryClient.invalidateQueries({ queryKey: ["summary", selectedProjectId] });
+                  void queryClient.invalidateQueries({ queryKey: ["repositories", selectedProjectId], refetchType: "all" });
+                  void queryClient.invalidateQueries({ queryKey: ["summary", selectedProjectId], refetchType: "all" });
+                  void queryClient.invalidateQueries({ queryKey: ["annual", selectedProjectId], refetchType: "all" });
                 }}
               />
               <ProjectDialog
@@ -1307,21 +1328,54 @@ export function Dashboard() {
               >
                 <Trash2 className="h-4 w-4 text-danger" />
               </IconButton>
-              <IconButton
-                label="Refresh project"
-                onClick={() => refreshProjectMutation.mutate()}
-                disabled={!selectedProjectId || refreshProjectMutation.isPending}
-              >
-                <RefreshCw className={iconClass(refreshProjectMutation.isPending)} />
-              </IconButton>
-              <IconButton
-                label="Refresh repository"
-                onClick={() => refreshRepositoryMutation.mutate()}
-                disabled={selectedRepoId === "all" || refreshRepositoryMutation.isPending}
-              >
-                <GitBranch className={iconClass(refreshRepositoryMutation.isPending)} />
-              </IconButton>
                 </div>
+              </section>
+              <section aria-label="Data synchronization" className="grid gap-3 rounded-md border border-border bg-panel p-4">
+                <div>
+                  <h3 className="text-sm font-semibold">Data synchronization</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Git operations run only after you request them. The repository scope is
+                    {selectedRepoId === "all" ? " the entire project." :
+                      ` ${selectedRepository?.name ?? "the selected repository"}.`}
+                    Local metric indexing always covers the whole project.
+                    Results are refreshed automatically when the operation finishes.
+                  </p>
+                </div>
+                <div className="grid gap-3 md:grid-cols-3">
+                  <button type="button" disabled={!selectedProjectId || syncBusy}
+                    onClick={() => syncMutation.mutate("repositories")}
+                    className="flex flex-col items-start gap-2 rounded-md border border-border bg-background p-4 text-left text-sm hover:bg-muted disabled:opacity-50">
+                    <span className="inline-flex items-center gap-2 font-semibold"><GitBranch className="h-4 w-4" /> Sync repositories</span>
+                    <span className="text-xs leading-relaxed text-muted-foreground">
+                      Fetch Git and refresh repository inventories. Annual scores are not reindexed.
+                    </span>
+                  </button>
+                  <button type="button" disabled={!selectedProjectId || syncBusy}
+                    onClick={() => syncMutation.mutate("metrics")}
+                    className="flex flex-col items-start gap-2 rounded-md border border-border bg-background p-4 text-left text-sm hover:bg-muted disabled:opacity-50">
+                    <span className="inline-flex items-center gap-2 font-semibold"><BarChart3 className="h-4 w-4" /> Sync local metrics</span>
+                    <span className="text-xs leading-relaxed text-muted-foreground">
+                      Update annual contribution indexes using cached Git mirrors only. No network fetch.
+                    </span>
+                  </button>
+                  <button type="button" disabled={!selectedProjectId || syncBusy}
+                    onClick={() => syncMutation.mutate("both")}
+                    className="flex flex-col items-start gap-2 rounded-md border border-accent/60 bg-background p-4 text-left text-sm hover:bg-muted disabled:opacity-50">
+                    <span className="inline-flex items-center gap-2 font-semibold"><RefreshCw className={iconClass(syncBusy)} /> Sync repositories + metrics</span>
+                    <span className="text-xs leading-relaxed text-muted-foreground">
+                      Fetch the selected scope, then index its annual history in the same run.
+                    </span>
+                  </button>
+                </div>
+                {syncMutation.isError && <p role="alert" className="text-sm text-danger">
+                  {syncMutation.error.message}
+                </p>}
+                {currentRun?.status === "failed" && <p role="alert" className="text-sm text-danger">
+                  Synchronization failed: {currentRun.errorMessage ?? "See the run status above."}
+                </p>}
+                {currentRun?.status === "succeeded" && <p role="status" className="text-sm text-muted-foreground">
+                  Synchronization complete. Dashboard and comparison data have been refreshed.
+                </p>}
               </section>
               <section className="grid gap-2 rounded-md border border-border bg-panel p-4">
                 <h3 className="text-sm font-semibold">Appearance</h3>

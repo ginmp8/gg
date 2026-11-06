@@ -40,12 +40,21 @@
     "turbo": "^2.5.4",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.33.1",
-    "vitest": "^3.2.2",
+    "vitest": "^4.1.12",
     "esbuild": "0.25.12",
     "@tauri-apps/cli": "2.12.4"
   },
   "overrides": {
     "postcss": "8.5.32",
-    "zod": "4.6.7"
+    "zod": "4.6.7",
+    "minimatch@3": {
+      "brace-expansion": "^1.1.21"
+    },
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^11.0.1"
+    },
+    "@esbuild-kit/core-utils": {
+      "esbuild": "0.25.12"
+    }
   }
 }

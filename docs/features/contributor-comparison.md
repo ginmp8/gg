@@ -1,18 +1,65 @@
 # Contributor comparison (GG Analytics 0.2.0)
 
 **Compare** is immediately to the right of **Contributors** in the menu.
-Choose a project/repository and analysis year, then search for contributors.
-The selection is saved per project, repository and year, so changing tabs or
-restarting GG restores the previous list. The tag and search filters are
-restored with the selected year.
+Choose a project and analysis year. Use **Repository scope** in the Compare tab
+(or the synchronized dashboard repository selector) to choose **All repositories**
+or a single repository. All repositories aggregates every indexed repository
+belonging to the selected project, deduplicating contributors by canonical
+email; a single repository restricts the candidates, metrics, scores and
+export to that repository. The selection is saved per project, repository
+and year, so changing tabs or restarting GG restores the previous list.
+The tag and search filters are restored with the selected year.
 
-Use **Select all matching** to include everyone visible after applying the
-optional tag and text filters, or toggle it again to remove only that visible
-set. There is no fixed four-person selection limit. Wide comparisons scroll
-horizontally, and the score cards have their own vertical scroll area.
-User-defined tags narrow the candidates without recalculating the scoring cohort.
+The comparison displays both the number of repository histories included
+in the selected scope and the count fully indexed. If a repository was
+added but not indexed, the UI names it explicitly instead of silently
+presenting the first repository's contributors as the full workspace.
+Use **Settings → Data synchronization → Sync local metrics** to index existing
+cached mirrors without contacting remotes. If a repository has no mirror, use
+**Sync repositories + metrics** to fetch and index it. The chosen analysis year still limits
+contributors to commits in that year: a fully indexed repository with
+no commits that year does not add any contributors.
 
-## Full available metric inventory
+Adding a repository invalidates cached annual reports. Once a refresh
+or reindex run completes, the dashboard refetches the comparison.
+
+## Executive ranking (default)
+
+The Compare tab opens on **Executive ranking**. It shows the ranking and a
+short explanation for each contributor's existing ICE-Git/1 and GG-Throughput/1
+evidence, rather than requiring interpretation of dozens of raw columns.
+Three leader cards highlight overall contribution, technical pace and
+test/documentation support. The sortable leaderboard shows a position and
+value for **overall contribution**, **technical pace**, **delivery**,
+**technical changes**, **tests and documentation**, **continuity**, optional
+**GitHub collaboration**, and **commit count** (activity volume only).
+Choose **Rank by** to sort using any of those dimensions.
+
+Positions are calculated against the **complete project/repository/year
+cohort**, not just selected people, filtered search results, or custom tags.
+Ties share a rank (1, 1, 3); unavailable evidence shows **N/A**, not rank
+zero. Incomplete history suppresses rankings. ICE-Git components require at least
+three distinct contributors with commits in the selected year and repository
+scope. A successful synchronization does not guarantee a large enough cohort:
+a fully indexed repository with one or two contributors shows a **History fully
+indexed — not enough contributors** explanation, rather than suggesting that
+synchronization failed. It still ranks commit volume, with relative scores as
+**N/A**, and offers **Compare all repositories** when another repository is
+available. Check the selected year, integration branch and canonical author
+identities if fewer contributors appear than expected. An incomplete history
+instead names repositories needing indexing and directs to Settings.
+Commit-count rank is explicitly a volume measure,
+not an estimate of work quality or performance. None of the rankings is an
+objective evaluation of individuals.
+
+Contributor checkboxes in the leaderboard control the comparison selection.
+Use **Selected only** to narrow visible rows, or open **Detailed evidence**
+for the full preexisting comparison and its export. Detailed view retains
+**Select all matching** after tag and search filters, without a fixed
+four-person cap; wide tables scroll horizontally. Tags and search change
+the people displayed, not the score-calculation cohort.
+
+## Full available metric inventory (Detailed evidence)
 
 The comparison shows all available numeric fields of AnnualContributor and
 IceContributorScore, grouped into collapsible sections instead of one

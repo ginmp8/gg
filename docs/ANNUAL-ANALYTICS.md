@@ -70,9 +70,13 @@ without deleting reusable per-SHA analyses. If indexing fails, existing
 published membership is retained; the UI reports incomplete coverage when
 the requested branch has no matching index.
 
-Use **Index local history** to recalculate missing metrics from already
-cached mirrors without fetching any remote. Normal **Refresh project** also
-indexes the annual data after the legacy analyzer. The legacy Overview and
+Use **Settings → Data synchronization → Sync local metrics** to recalculate
+missing metrics from already cached mirrors without fetching any remote.
+**Sync repositories** fetches Git and updates repository inventories, but
+marks older annual evidence as incomplete until reindexed.
+**Sync repositories + metrics** performs both steps for the chosen repository
+scope. The UI refreshes active and inactive analytics queries after the run
+finishes, without requiring a hard browser reload. The legacy Overview and
 other tabs still perform their historical analysis; their processing is not
 yet incremental. The annual feature does **not** impose a 500-commit cap.
 A regression indexes 521 commits, checks that all are visible in the annual

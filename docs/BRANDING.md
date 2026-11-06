@@ -47,9 +47,10 @@ older builds. Do not delete an installation's data directory to rename the app.
 
 ## GitHub repository and legal attribution
 
-GitHub repository names and URLs are **not** changed by a branch commit. Until
-an explicit repo-level rename, the valid URL remains
-https://github.com/ginmp8/gita. See [NOTICE](../NOTICE.md) and [MIT LICENSE](../LICENSE)
+The canonical repository URL is now https://github.com/ginmp8/gg after
+an explicit GitHub repository rename. A branch commit alone never renames
+a GitHub repository. Historical references to Gita document the earlier
+source lineage. See [NOTICE](../NOTICE.md) and [MIT LICENSE](../LICENSE)
 for origin and copyright attribution.
 
 ## Reproducing screenshots

@@ -18,9 +18,7 @@ GG turns Git history into a clear engineering analytics dashboard. Group
 repositories into projects, refresh their data on demand, and explore the
 people and files behind every change—all from a local web application.
 
-**Version 0.2.0 candidate:** prepared on the development branch. No tag or GitHub Release has been published.
-See the [0.2.0 release notes](releases/0.2.0.md), [documentation index](docs/README.md)
-and [feature catalog](docs/features/README.md).
+**Version 0.3.0 is proposed, not published.** Current package metadata still declares `0.2.0`. See the [0.3.0 release proposal](releases/0.3.0.md), [0.2.0 candidate history](releases/0.2.0.md), [documentation index](docs/README.md), and [feature catalog](docs/features/README.md).
 
 ## One dashboard for the whole project
 
@@ -170,7 +168,7 @@ installer does not bundle this CLI.
 Clone or download the repository, then run:
 
 ```bash
-git clone https://github.com/ginmp8/gita.git gg-analytics
+git clone https://github.com/ginmp8/gg.git gg-analytics
 cd gg-analytics
 npm ci
 npm run dev
