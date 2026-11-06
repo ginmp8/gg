@@ -23,6 +23,8 @@ jobs:
       - name: Compute compatible lockfile-only remediation without lifecycle scripts
         shell: bash
         run: |
+          set -e
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
           set +e
           npm audit --json > audit-before.json
           node -e 'const f=require("fs");const a=JSON.parse(f.readFileSync("audit-before.json","utf8"));console.log("GG_AUDIT_BEFORE="+JSON.stringify({total:a.metadata?.vulnerabilities,packages:Object.entries(a.vulnerabilities||{}).map(([name,v])=>({name,severity:v.severity,range:v.range,fixAvailable:v.fixAvailable,via:v.via.map(x=>typeof x==="string"?x:{name:x.name,title:x.title,range:x.range,url:x.url})}))}))'
@@ -37,3 +39,13 @@ jobs:
           echo "GG_PACKAGE_JSON_DIFF_START"
           git diff -- package.json
           echo "GG_PACKAGE_JSON_DIFF_END"
+      - name: Verify candidate dependency tree and app compatibility
+        run: |
+          npm ci
+          npm run lint
+          npm run typecheck
+          npm run test
+          npm run build
+          npm run desktop:check
+          npm audit --audit-level=moderate
+          npm audit --omit=dev --audit-level=high
