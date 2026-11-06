@@ -616,8 +616,9 @@ export function registerRoutes(server: FastifyInstance, database: GitaDatabase):
       offset: z.coerce.number().int().min(0).default(0)
     }).parse(request.query);
     const repositories = await listRepositories(database, project.id);
-    const github = repositories.find(repo => repo.provider === "github" && repo.githubOwnerRepo);
-    const providerState = await resolveProviderState(github?.provider ?? "local", github?.githubOwnerRepo ?? null);
+    const github = repositories.find(repo => repo.provider === "github");
+    const details = github ? await getRepositoryWithProviderDetails(database, github.id) : null;
+    const providerState = await resolveProviderState(details?.provider ?? "local", details?.githubOwnerRepo ?? null);
     return { ...listProjectPullRequests(database, project.id, limit, offset), providerState };
   });
 
