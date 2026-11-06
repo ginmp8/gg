@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import type { CommitFileStat, CommitRecord } from "@gita/core";
+import type { CommitFileStat, CommitRecord } from "@gg/core";
 
 const RECORD_SEPARATOR = "\x1e";
 const FIELD_SEPARATOR = "\0";

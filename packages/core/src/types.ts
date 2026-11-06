@@ -145,6 +145,10 @@ export interface Branch {
   updatedAt: ISODateString;
 }
 
+export interface ProjectBranch extends Branch {
+  repositoryName: string;
+}
+
 export interface PullRequest {
   repoId: string;
   provider: "github";
@@ -164,6 +168,10 @@ export interface PullRequest {
   changedFiles: number | null;
   reviewDecision: string | null;
   url: string;
+}
+
+export interface ProjectPullRequest extends PullRequest {
+  repositoryName: string;
 }
 
 export interface AnalyticsFilters {
@@ -279,7 +287,7 @@ export interface ProjectSummary {
 
 export interface ProviderDegradedState {
   available: false;
-  reason: "missing_gh" | "unauthenticated" | "rate_limited" | "unsupported_provider" | "unknown";
+  reason: "network_disabled" | "missing_gh" | "unauthenticated" | "rate_limited" | "unsupported_provider" | "unknown";
   message: string;
 }
 

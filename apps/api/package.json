@@ -1,6 +1,6 @@
 {
-  "name": "@gita/api",
-  "version": "0.1.0",
+  "name": "@gg/api",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,12 +12,12 @@
   },
   "dependencies": {
     "@fastify/cors": "^11.0.1",
-    "@gita/core": "0.1.0",
-    "@gita/db": "0.1.0",
-    "@gita/git-engine": "0.1.0",
-    "@gita/github-adapter": "0.1.0",
-    "fastify": "^5.3.3",
-    "zod": "^3.25.56"
+    "@gg/core": "0.2.0",
+    "@gg/db": "0.2.0",
+    "@gg/git-engine": "0.2.0",
+    "@gg/github-adapter": "0.2.0",
+    "fastify": "5.12.8",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "tsx": "^4.19.4",

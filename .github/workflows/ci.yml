@@ -19,10 +19,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 24
           cache: npm
@@ -38,3 +38,16 @@ jobs:
 
       - name: Test
         run: npm run test
+
+      - name: Verify local CLI JSON contract
+        run: |
+          npm --silent run cli -- catalog > "$RUNNER_TEMP/gg-cli-catalog.json"
+          node -e "const fs=require('node:fs');const doc=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/gg-cli-catalog.json','utf8'));if(!doc.commands.some(c=>c.name==='scores')||!doc.rawTables.includes('annual_file_changes'))process.exit(1)"
+
+      - name: Build
+        run: npm run build
+
+      # Keep audit a hard failure but execute focused regression checks first,
+      # so a pre-existing dependency advisory never conceals test failures.
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high

@@ -1,5 +1,7 @@
 import { spawn } from "node:child_process";
 
+import { isGitHubMetadataAllowed, isRemoteGitAllowed } from "./network-policy";
+
 export interface GitCommandResult {
   command: string;
   args: string[];
@@ -13,6 +15,8 @@ export interface GitCommandResult {
 export interface GitCommandOptions {
   cwd?: string;
   timeoutMs?: number;
+  /** Only an explicitly requested remote refresh may authorize network Git. */
+  allowRemoteGit?: boolean;
 }
 
 export class GitCommandError extends Error {
@@ -29,8 +33,9 @@ const DEFAULT_TIMEOUT_MS = 120_000;
 
 export function redactSecrets(value: string): string {
   return value
-    .replace(/(https?:\/\/)([^/@:\s]+):([^/@\s]+)@/gi, "$1$2:***@")
-    .replace(/(gh[pousr]_[A-Za-z0-9_]+)/g, "***");
+    .replace(/(https?:\/\/)[^\s/?#]*@/gi, "$1***@")
+    .replace(/([?&](?:token|access_token|auth|authorization|password|private_token|client_secret|api_key)=)[^&#\s]*/gi, "$1***")
+    .replace(/\b(?:gh[pousr]_[A-Za-z0-9_]+|github_pat_[A-Za-z0-9_]+|glpat-[A-Za-z0-9_-]+)\b/g, "***");
 }
 
 export async function runGit(args: string[], options: GitCommandOptions = {}): Promise<GitCommandResult> {
@@ -44,10 +49,34 @@ export async function runProcess(
 ): Promise<GitCommandResult> {
   const started = performance.now();
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const safeArgs = args.map(redactSecrets);
+
+  // The GitHub CLI can access the network even for status checks.
+  // Respect explicit offline/metadata-disable switches before starting it.
+  if (command === "gh" && !isGitHubMetadataAllowed()) {
+    throw new Error(
+      "GitHub metadata is disabled by GG_OFFLINE=1 or GG_ALLOW_GITHUB_METADATA=0."
+    );
+  }
+
+  const childEnv = { ...process.env };
+  // A future packaged desktop may use a private API token. Neither Git nor
+  // the GitHub CLI needs it, so do not leak it into child processes.
+  delete childEnv.GG_DESKTOP_TOKEN;
+  if (command === "git") {
+    const remoteAllowed = options.allowRemoteGit === false
+      ? false
+      : isRemoteGitAllowed(process.env, options.allowRemoteGit === true);
+    // Restrict transport even for approved operations: no git://, ext:: or
+    // custom remote helpers. Local-repository refreshes remain file-only.
+    childEnv.GIT_ALLOW_PROTOCOL = remoteAllowed ? "file:https:ssh" : "file";
+    childEnv.GIT_TERMINAL_PROMPT = "0";
+  }
 
   return new Promise<GitCommandResult>((resolve, reject) => {
     const child = spawn(command, args, {
       cwd: options.cwd,
+      env: childEnv,
       shell: false,
       stdio: ["ignore", "pipe", "pipe"]
     });
@@ -74,7 +103,7 @@ export async function runProcess(
       clearTimeout(timeout);
       const result: GitCommandResult = {
         command,
-        args,
+        args: safeArgs,
         stdout: redactSecrets(stdout),
         stderr: redactSecrets(error.message),
         exitCode: null,
@@ -88,8 +117,8 @@ export async function runProcess(
       clearTimeout(timeout);
       const result: GitCommandResult = {
         command,
-        args,
-        stdout,
+        args: safeArgs,
+        stdout: exitCode === 0 && !timedOut ? stdout : redactSecrets(stdout),
         stderr: redactSecrets(stderr),
         exitCode,
         durationMs: Math.round(performance.now() - started),

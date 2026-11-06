@@ -1,0 +1,21 @@
+[package]
+name = "gg-analytics-desktop"
+version = "0.2.0"
+description = "Local-first Git analytics desktop"
+authors = ["GG contributors"]
+edition = "2021"
+rust-version = "1.90"
+
+[build-dependencies]
+tauri-build = "=2.7.4"
+
+[dependencies]
+tauri = "=2.12.5"
+tauri-plugin-shell = "=2.6.0"
+getrandom = "=0.3.4"
+serde_json = "1"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true

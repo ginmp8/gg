@@ -1,6 +1,6 @@
 {
-  "name": "@gita/core",
-  "version": "0.1.0",
+  "name": "@gg/core",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -15,7 +15,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "zod": "^3.25.56"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "vitest": "^3.2.2"

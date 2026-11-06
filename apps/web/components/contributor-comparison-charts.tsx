@@ -1,8 +1,10 @@
 "use client";
 
-import type { ContributorFileTypeRow, ContributorLeaderboardRow } from "@gita/core";
+import type { ContributorFileTypeRow, ContributorLeaderboardRow } from "@gg/core";
 import * as echarts from "echarts";
 import { useEffect, useMemo, useRef } from "react";
+
+import { bindChartTheme } from "@/lib/chart-theme";
 
 import { fileTypeLabel } from "@/components/file-focus-chart";
 
@@ -80,7 +82,10 @@ export function ContributorComparisonChart({
       ]
     });
 
+    const unbindTheme = bindChartTheme(chart);
+
     return () => {
+      unbindTheme();
       resizeObserver.disconnect();
       chart.dispose();
     };
@@ -153,7 +158,10 @@ export function ContributorFileTypeShareChart({
       }))
     });
 
+    const unbindTheme = bindChartTheme(chart);
+
     return () => {
+      unbindTheme();
       resizeObserver.disconnect();
       chart.dispose();
     };

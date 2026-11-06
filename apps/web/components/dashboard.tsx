@@ -22,12 +22,14 @@ import {
   Plus,
   RefreshCw,
   Save,
+  Settings2,
   Search,
   Trash2,
   Users,
   X
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 
 import type {
   ActivityBucket,
@@ -37,26 +39,43 @@ import type {
   ContributorLeaderboardRow,
   FileTypeAnalyticsRow,
   HotFileAnalyticsRow,
-  PullRequest,
+  ProjectBranch,
+  ProjectPullRequest,
+  Project,
   RefreshRun,
   RepositoryFolderFilter,
   Repository,
   RepositoryComparisonRow
-} from "@gita/core";
+} from "@gg/core";
 
 import { ActivityChart } from "@/components/activity-chart";
+import { AnnualAnalytics } from "@/components/annual-analytics";
+import { AnnualIdentitySettings } from "@/components/annual-identity-settings";
+import { ContributorSideBySide } from "@/components/contributor-side-by-side";
+import { TagSettings } from "@/components/tag-settings";
+import { LocalCliSettings } from "@/components/local-cli-settings";
+import {
+  currentYearToDate, readDashboardScopePreference, storeDashboardScopePreference
+} from "@/lib/analytics-preferences";
+import { BranchComparisonPanel } from "@/components/branch-comparison";
+import { GitHubRepositoryPicker } from "@/components/github-repository-picker";
 import {
   ContributorComparisonChart,
   ContributorFileTypeShareChart
 } from "@/components/contributor-comparison-charts";
 import { DataTable } from "@/components/data-table";
+import { ProjectDeleteDialog } from "@/components/project-delete-dialog";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { FileFocusChart, fileTypeLabel } from "@/components/file-focus-chart";
 import {
   createBranchView,
   createProject,
   createRepository,
   deleteBranchView,
+  deleteProjectAndLocalData,
   getBranches,
+  getProjectBranches,
+  getProjectPullRequests,
   getBranchViews,
   getContributorFileTypes,
   getFileTypes,
@@ -89,8 +108,8 @@ type BranchViewNameDialogState = {
 };
 
 const CUSTOM_BRANCH_VIEW_ID = "custom";
-const ACTIVE_BRANCH_VIEW_STORAGE_KEY = "gita.activeBranchViewByProject";
-const DATE_RANGE_STORAGE_KEY = "gita.dashboardDateRange";
+const ACTIVE_BRANCH_VIEW_STORAGE_KEY = "gg.activeBranchViewByProject";
+const DATE_RANGE_STORAGE_KEY = "gg.dashboardDateRange";
 
 function getStoredActiveBranchViewId(projectId: string): string | null {
   return readActiveBranchViewStorage()[projectId] ?? null;
@@ -120,7 +139,8 @@ function readActiveBranchViewStorage(): Record<string, string> {
   }
 
   try {
-    const rawValue = window.localStorage.getItem(ACTIVE_BRANCH_VIEW_STORAGE_KEY);
+    const rawValue = window.localStorage.getItem(ACTIVE_BRANCH_VIEW_STORAGE_KEY) ??
+      window.localStorage.getItem("gita.activeBranchViewByProject");
     if (!rawValue) {
       return {};
     }
@@ -143,13 +163,16 @@ export function Dashboard() {
   const queryClient = useQueryClient();
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedRepoId, setSelectedRepoId] = useState("all");
+  const [branchPage, setBranchPage] = useState(0);
+  const [prPage, setPrPage] = useState(0);
   const [selectedContributorId, setSelectedContributorId] = useState<string | null>(null);
-  const [datePreset, setDatePreset] = useState<DateRangePreset>("all");
+  const [datePreset, setDatePreset] = useState<DateRangePreset>("year");
   const [monthCursor, setMonthCursor] = useState(() => startOfMonth(new Date()));
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
+  const [from, setFrom] = useState(() => currentYearToDate(new Date()).from);
+  const [to, setTo] = useState(() => currentYearToDate(new Date()).to);
   const [dateRangeRestored, setDateRangeRestored] = useState(false);
   const [metric, setMetric] = useState("commits");
+  const [scopeRestored, setScopeRestored] = useState(false);
   const [branchSelection, setBranchSelection] = useState<BranchSelectionState>({});
   const [folderFilters, setFolderFilters] = useState<FolderFilterState>({});
   const [activeBranchViewId, setActiveBranchViewId] = useState(CUSTOM_BRANCH_VIEW_ID);
@@ -162,6 +185,8 @@ export function Dashboard() {
   );
   const [activeRunId, setActiveRunId] = useState<string | null>(null);
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
+  const [projectDeleteOpen, setProjectDeleteOpen] = useState(false);
+  const [projectDeleteWarning, setProjectDeleteWarning] = useState<string | null>(null);
   const [repositoryDialogOpen, setRepositoryDialogOpen] = useState(false);
   const [branchEditorOpen, setBranchEditorOpen] = useState(false);
   const [branchViewNameDialog, setBranchViewNameDialog] =
@@ -178,18 +203,45 @@ export function Dashboard() {
   const projects = projectsQuery.data?.items ?? [];
 
   useEffect(() => {
-    if (!selectedProjectId && projects[0]) {
-      setSelectedProjectId(projects[0].id);
+    const saved = readDashboardScopePreference();
+    if (saved) {
+      setSelectedProjectId(saved.projectId);
+      setSelectedRepoId(saved.repositoryId);
+      setMetric(saved.metric);
     }
-  }, [projects, selectedProjectId]);
+    setScopeRestored(true);
+  }, []);
+
+  useEffect(() => {
+    if (!scopeRestored || !projectsQuery.isSuccess) return;
+    if (!selectedProjectId || !projects.some(project => project.id === selectedProjectId)) {
+      setSelectedProjectId(projects[0]?.id ?? null);
+      setSelectedRepoId("all");
+    }
+  }, [projects, projectsQuery.isSuccess, scopeRestored, selectedProjectId]);
+
+  useEffect(() => {
+    if (!scopeRestored) return;
+    storeDashboardScopePreference({
+      projectId: selectedProjectId, repositoryId: selectedRepoId, metric
+    });
+  }, [metric, scopeRestored, selectedProjectId, selectedRepoId]);
 
   useEffect(() => {
     const storedDateRange = readStoredDateRange();
     if (storedDateRange) {
       setDatePreset(storedDateRange.preset);
-      setFrom(storedDateRange.from);
-      setTo(storedDateRange.to);
-      setMonthCursor(parseDateInput(storedDateRange.monthCursor) ?? startOfMonth(new Date()));
+      if (storedDateRange.preset === "year") {
+        // Keep a saved rolling year-to-date selection current after restarting on a later day.
+        const rolling = resolveDatePreset("year", new Date());
+        setFrom(rolling.from);
+        setTo(rolling.to);
+        setMonthCursor(rolling.monthCursor);
+      } else {
+        setFrom(storedDateRange.from);
+        setTo(storedDateRange.to);
+        setMonthCursor(parseDateInput(storedDateRange.monthCursor) ?? startOfMonth(new Date()));
+      }
     }
     setDateRangeRestored(true);
   }, []);
@@ -229,10 +281,12 @@ export function Dashboard() {
   }, [selectedProjectId]);
 
   useEffect(() => {
-    if (selectedRepoId !== "all" && !repositories.some((repo) => repo.id === selectedRepoId)) {
+    // Do not erase a restored repository choice while its project repositories are loading.
+    if (repositoriesQuery.isSuccess && selectedRepoId !== "all" &&
+      !repositories.some((repo) => repo.id === selectedRepoId)) {
       setSelectedRepoId("all");
     }
-  }, [repositories, selectedRepoId]);
+  }, [repositories, repositoriesQuery.isSuccess, selectedRepoId]);
 
   const filters = useMemo<DashboardFilters>(
     () => ({
@@ -306,6 +360,20 @@ export function Dashboard() {
       getContributorFileTypes(requireSelected(selectedProjectId), contributorFilters ?? {}),
     enabled: Boolean(selectedProjectId && contributorFilters)
   });
+  useEffect(() => {
+    setBranchPage(0);
+    setPrPage(0);
+  }, [selectedProjectId, selectedRepoId]);
+  const projectBranchesQuery = useQuery({
+    queryKey: ["project-branches", selectedProjectId, branchPage],
+    queryFn: () => getProjectBranches(requireSelected(selectedProjectId), branchPage),
+    enabled: Boolean(selectedProjectId && selectedRepoId === "all")
+  });
+  const projectPullRequestsQuery = useQuery({
+    queryKey: ["project-pull-requests", selectedProjectId, prPage],
+    queryFn: () => getProjectPullRequests(requireSelected(selectedProjectId), prPage),
+    enabled: Boolean(selectedProjectId && selectedRepoId === "all")
+  });
   const branchesQuery = useQuery({
     queryKey: ["branches", selectedRepoId],
     queryFn: () => getBranches(selectedRepoId),
@@ -345,6 +413,32 @@ export function Dashboard() {
       setProjectDialogOpen(false);
       setSelectedProjectId(project.id);
       void queryClient.invalidateQueries({ queryKey: ["projects"] });
+    }
+  });
+
+  const deleteProjectMutation = useMutation({
+    mutationFn: ({ id, confirmation }: { id: string; confirmation: string }) =>
+      deleteProjectAndLocalData(id, confirmation),
+    onSuccess(result, { id }) {
+      queryClient.setQueryData<{ items: Project[] }>(["projects"], (data) =>
+        data ? { items: data.items.filter((project) => project.id !== id) } : data
+      );
+      setProjectDeleteOpen(false);
+      setProjectDeleteWarning(result.cleanupWarning);
+      setSelectedProjectId((previous) =>
+        previous === id ? (projects.find((project) => project.id !== id)?.id ?? null) : previous
+      );
+      setSelectedRepoId("all");
+      setSelectedContributorId(null);
+      setActiveRunId(null);
+      try {
+        const stored = readActiveBranchViewStorage();
+        delete stored[id];
+        window.localStorage.setItem(ACTIVE_BRANCH_VIEW_STORAGE_KEY, JSON.stringify(stored));
+      } catch {
+        // A disabled browser preference store must not block project deletion.
+      }
+      void queryClient.invalidateQueries();
     }
   });
 
@@ -444,9 +538,19 @@ export function Dashboard() {
   const hotFiles = hotFilesQuery.data?.items ?? [];
   const contributorFileTypes = contributorFileTypesQuery.data?.items ?? [];
   const selectedContributorFileTypes = selectedContributorFileTypesQuery.data?.items ?? [];
-  const branches = branchesQuery.data?.items ?? [];
-  const pullRequests = pullRequestsQuery.data?.items ?? [];
-  const providerState = pullRequestsQuery.data?.providerState ?? null;
+  const branches: ProjectBranch[] = selectedRepoId === "all"
+    ? projectBranchesQuery.data?.items ?? []
+    : (branchesQuery.data?.items ?? []).map(row => ({
+        ...row, repositoryName: selectedRepository?.name ?? ""
+      }));
+  const pullRequests: ProjectPullRequest[] = selectedRepoId === "all"
+    ? projectPullRequestsQuery.data?.items ?? []
+    : (pullRequestsQuery.data?.items ?? []).map(row => ({
+        ...row, repositoryName: selectedRepository?.name ?? ""
+      }));
+  const providerState = selectedRepoId === "all"
+    ? projectPullRequestsQuery.data?.providerState ?? null
+    : pullRequestsQuery.data?.providerState ?? null;
   const currentRun = refreshRunQuery.data ?? null;
   const repositoryBranchSettings = repositories.map((repo, index) =>
     toRepositoryBranchSetting(repo, repositoryBranchesQueries[index]?.data?.items ?? [])
@@ -616,11 +720,10 @@ export function Dashboard() {
         <div className="mx-auto flex max-w-[1500px] flex-col gap-4 px-4 py-4 lg:px-6">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-foreground text-background">
-                <BarChart3 className="h-5 w-5" />
-              </div>
+              <Image src="/gg-mark.svg" alt="" width={40} height={40}
+                className="h-10 w-10 shrink-0 rounded-md" />
               <div className="min-w-0">
-                <h1 className="truncate text-xl font-semibold">Gita</h1>
+                <h1 className="truncate text-xl font-semibold">GG Analytics</h1>
                 <p className="truncate text-sm text-muted-foreground">
                   {selectedProject?.name ?? "Local git analytics"}
                 </p>
@@ -628,6 +731,7 @@ export function Dashboard() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {currentRun ? <RefreshStatus run={currentRun} /> : null}
+              {projects.length === 0 ? (
               <ProjectDialog
                 open={projectDialogOpen}
                 onOpenChange={setProjectDialogOpen}
@@ -635,37 +739,132 @@ export function Dashboard() {
                 error={createProjectMutation.error}
                 onSubmit={(input) => createProjectMutation.mutate(input)}
               />
-              <RepositoryDialog
-                open={repositoryDialogOpen}
-                onOpenChange={setRepositoryDialogOpen}
-                disabled={!selectedProjectId}
-                pending={createRepositoryMutation.isPending}
-                error={createRepositoryMutation.error}
-                onSubmit={(input) => createRepositoryMutation.mutate(input)}
-              />
-              <IconButton
-                label="Refresh project"
-                onClick={() => refreshProjectMutation.mutate()}
-                disabled={!selectedProjectId || refreshProjectMutation.isPending}
-              >
-                <RefreshCw className={iconClass(refreshProjectMutation.isPending)} />
-              </IconButton>
-              <IconButton
-                label="Refresh repository"
-                onClick={() => refreshRepositoryMutation.mutate()}
-                disabled={selectedRepoId === "all" || refreshRepositoryMutation.isPending}
-              >
-                <GitBranch className={iconClass(refreshRepositoryMutation.isPending)} />
-              </IconButton>
+              ) : null}
             </div>
           </div>
 
+
+
+          <BranchSelectionDialog
+            open={branchEditorOpen}
+            onOpenChange={setBranchEditorOpen}
+            branchSettings={visibleBranchSettings}
+            selection={branchSelection}
+            folderFilters={folderFilters}
+            onToggleBranch={handleToggleCustomBranch}
+            onFolderModeChange={handleFolderModeChange}
+            onFolderPathsChange={handleFolderPathsChange}
+            onUseConfigured={() =>
+              setBranchSelection((current) =>
+                selectConfiguredVisibleBranches(current, repositoryBranchSettings, selectedRepoId)
+              )
+            }
+            onUseVisibleAll={() =>
+              setBranchSelection((current) =>
+                selectAllVisibleBranches(current, repositoryBranchSettings, selectedRepoId)
+              )
+            }
+            onClearVisible={() =>
+              setBranchSelection((current) =>
+                clearVisibleBranches(current, repositoryBranchSettings, selectedRepoId)
+              )
+            }
+          />
+          <BranchViewNameDialog
+            state={branchViewNameDialog}
+            pending={createBranchViewMutation.isPending || updateBranchViewMutation.isPending}
+            error={createBranchViewMutation.error ?? updateBranchViewMutation.error}
+            onOpenChange={(open) => {
+              if (!open) {
+                setBranchViewNameDialog(null);
+              }
+            }}
+            onSubmit={handleBranchViewNameSubmit}
+          />
+          <BranchViewDeleteDialog
+            candidate={branchViewDeleteDialog}
+            pending={deleteBranchViewMutation.isPending}
+            error={deleteBranchViewMutation.error}
+            onOpenChange={(open) => {
+              if (!open) {
+                setBranchViewDeleteDialog(null);
+              }
+            }}
+            onConfirm={(viewId) => deleteBranchViewMutation.mutate(viewId)}
+          />
+          <ProjectDeleteDialog
+            project={selectedProject}
+            open={projectDeleteOpen}
+            onOpenChange={setProjectDeleteOpen}
+            pending={deleteProjectMutation.isPending}
+            error={deleteProjectMutation.error}
+            onConfirm={(id, confirmation) => deleteProjectMutation.mutate({ id, confirmation })}
+          />
+        </div>
+      </header>
+
+      <div className="mx-auto grid max-w-[1500px] gap-4 px-4 py-4 lg:px-6">
+        {projectsQuery.isError ? <ErrorBanner error={projectsQuery.error} /> : null}
+        {projectDeleteWarning ? (
+          <p role="alert" className="rounded-md border border-warning p-3 text-sm text-warning">
+            {projectDeleteWarning}
+          </p>
+        ) : null}
+
+        {projects.length === 0 && !projectsQuery.isLoading ? (
+          <EmptyProjectState onCreate={() => setProjectDialogOpen(true)} />
+        ) : (
+          <Tabs.Root defaultValue="annual" className="grid gap-4">
+            <Tabs.List className="flex overflow-x-auto rounded-md border border-border bg-panel p-1 text-sm shadow-panel">
+              <TabTrigger
+                value="annual"
+                icon={<BarChart3 className="h-4 w-4" />}
+                label="Annual contribution"
+              />
+              <TabTrigger
+                value="overview"
+                icon={<Database className="h-4 w-4" />}
+                label="Overview"
+              />
+              <TabTrigger
+                value="contributors"
+                icon={<Users className="h-4 w-4" />}
+                label="Contributors"
+              />
+              <TabTrigger
+                value="compare"
+                icon={<Users className="h-4 w-4" />}
+                label="Compare"
+              />
+              <TabTrigger
+                value="files"
+                icon={<FileCode2 className="h-4 w-4" />}
+                label="Files & focus"
+              />
+              <TabTrigger
+                value="branches"
+                icon={<GitBranch className="h-4 w-4" />}
+                label="Branches"
+              />
+              <TabTrigger
+                value="pull-requests"
+                icon={<GitPullRequest className="h-4 w-4" />}
+                label="Pull requests"
+              />
+              <TabTrigger
+                value="settings"
+                icon={<Settings2 className="h-4 w-4" />}
+                label="Settings"
+              />
+            </Tabs.List>
+            <section aria-label="Analytics scope and filters" className="rounded-md border border-border bg-panel p-3">
+              <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Analysis scope</div>
           <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-[minmax(180px,1fr)_minmax(180px,1fr)_minmax(520px,2fr)_160px]">
             <SelectBox
               value={selectedProjectId ?? ""}
               placeholder="Project"
               disabled={projects.length === 0}
-              onValueChange={setSelectedProjectId}
+              onValueChange={projectId => { setSelectedProjectId(projectId); setSelectedRepoId("all"); }}
               items={projects.map((project) => ({ value: project.id, label: project.name }))}
             />
             <SelectBox
@@ -722,130 +921,20 @@ export function Dashboard() {
               ]}
             />
           </div>
+            </section>
 
-          <BranchViewControls
-            activeViewId={activeBranchViewId}
-            views={branchViews}
-            branchSettings={visibleBranchSettings}
-            selection={branchSelection}
-            folderFilters={folderFilters}
-            pending={
-              branchViewsQuery.isLoading ||
-              createBranchViewMutation.isPending ||
-              updateBranchViewMutation.isPending ||
-              deleteBranchViewMutation.isPending
-            }
-            error={branchViewError}
-            onViewChange={handleBranchViewChange}
-            onOpenEditor={() => setBranchEditorOpen(true)}
-            onSave={() => setBranchViewNameDialog({ mode: "save", initialName: "" })}
-            onUpdate={handleSaveActiveBranchView}
-            onDuplicate={() => {
-              const viewId = activeBranchViewIdRef.current;
-              const view = branchViews.find((item) => item.id === viewId);
-              setBranchViewNameDialog({
-                mode: "duplicate",
-                initialName: `${view?.name ?? "Custom"} copy`
-              });
-            }}
-            onRename={() => {
-              const viewId = activeBranchViewIdRef.current;
-              if (viewId !== "custom") {
-                const view = branchViews.find((item) => item.id === viewId);
-                setBranchViewNameDialog({
-                  mode: "rename",
-                  initialName: view?.name ?? "",
-                  viewId
-                });
-              }
-            }}
-            onDelete={handleDeleteActiveBranchView}
-          />
-          <BranchSelectionDialog
-            open={branchEditorOpen}
-            onOpenChange={setBranchEditorOpen}
-            branchSettings={visibleBranchSettings}
-            selection={branchSelection}
-            folderFilters={folderFilters}
-            onToggleBranch={handleToggleCustomBranch}
-            onFolderModeChange={handleFolderModeChange}
-            onFolderPathsChange={handleFolderPathsChange}
-            onUseConfigured={() =>
-              setBranchSelection((current) =>
-                selectConfiguredVisibleBranches(current, repositoryBranchSettings, selectedRepoId)
-              )
-            }
-            onUseVisibleAll={() =>
-              setBranchSelection((current) =>
-                selectAllVisibleBranches(current, repositoryBranchSettings, selectedRepoId)
-              )
-            }
-            onClearVisible={() =>
-              setBranchSelection((current) =>
-                clearVisibleBranches(current, repositoryBranchSettings, selectedRepoId)
-              )
-            }
-          />
-          <BranchViewNameDialog
-            state={branchViewNameDialog}
-            pending={createBranchViewMutation.isPending || updateBranchViewMutation.isPending}
-            error={createBranchViewMutation.error ?? updateBranchViewMutation.error}
-            onOpenChange={(open) => {
-              if (!open) {
-                setBranchViewNameDialog(null);
-              }
-            }}
-            onSubmit={handleBranchViewNameSubmit}
-          />
-          <BranchViewDeleteDialog
-            candidate={branchViewDeleteDialog}
-            pending={deleteBranchViewMutation.isPending}
-            error={deleteBranchViewMutation.error}
-            onOpenChange={(open) => {
-              if (!open) {
-                setBranchViewDeleteDialog(null);
-              }
-            }}
-            onConfirm={(viewId) => deleteBranchViewMutation.mutate(viewId)}
-          />
-        </div>
-      </header>
-
-      <div className="mx-auto grid max-w-[1500px] gap-4 px-4 py-4 lg:px-6">
-        {projectsQuery.isError ? <ErrorBanner error={projectsQuery.error} /> : null}
-
-        {projects.length === 0 && !projectsQuery.isLoading ? (
-          <EmptyProjectState onCreate={() => setProjectDialogOpen(true)} />
-        ) : (
-          <Tabs.Root defaultValue="overview" className="grid gap-4">
-            <Tabs.List className="flex overflow-x-auto rounded-md border border-border bg-panel p-1 text-sm shadow-panel">
-              <TabTrigger
-                value="overview"
-                icon={<Database className="h-4 w-4" />}
-                label="Overview"
-              />
-              <TabTrigger
-                value="contributors"
-                icon={<Users className="h-4 w-4" />}
-                label="Contributors"
-              />
-              <TabTrigger
-                value="files"
-                icon={<FileCode2 className="h-4 w-4" />}
-                label="Files & focus"
-              />
-              <TabTrigger
-                value="branches"
-                icon={<GitBranch className="h-4 w-4" />}
-                label="Branches"
-              />
-              <TabTrigger
-                value="pull-requests"
-                icon={<GitPullRequest className="h-4 w-4" />}
-                label="Pull requests"
-              />
-            </Tabs.List>
-
+            <Tabs.Content
+              value="annual"
+              className="grid gap-4 data-[state=inactive]:hidden"
+            >
+              {selectedProjectId ? (
+                <AnnualAnalytics
+                  projectId={selectedProjectId}
+                  repositoryId={selectedRepoId}
+                  onRunStarted={setActiveRunId}
+                />
+              ) : null}
+            </Tabs.Content>
             <Tabs.Content
               value="overview"
               className="grid gap-4 data-[state=inactive]:hidden"
@@ -951,7 +1040,7 @@ export function Dashboard() {
               <div className="grid gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(520px,1.1fr)]">
                 <section className="rounded-md border border-border bg-panel p-4 shadow-panel">
                   <SectionTitle
-                    title="Contributor performance"
+                    title="Contributor activity"
                     subtitle="Sorted by selected metric"
                   />
                   {leaderboardQuery.isLoading ? (
@@ -1022,6 +1111,14 @@ export function Dashboard() {
               ) : null}
             </Tabs.Content>
 
+            <Tabs.Content
+              value="compare"
+              className="grid gap-4 data-[state=inactive]:hidden"
+            >
+              {selectedProjectId && <ContributorSideBySide
+                projectId={selectedProjectId} repositoryId={selectedRepoId}
+              />}
+            </Tabs.Content>
             <Tabs.Content
               value="files"
               className="grid gap-4 data-[state=inactive]:hidden"
@@ -1117,13 +1214,21 @@ export function Dashboard() {
                 subtitle={
                   selectedRepository
                     ? `${selectedRepository.name} · time source ${branchesQuery.data?.branchTimeSource ?? "headCommit"}`
-                    : "Select one repository"
+                    : `${repositories.length} repositories · all branches`
                 }
               />
+              {projectBranchesQuery.isError && selectedRepoId === "all" ? <ErrorBanner error={projectBranchesQuery.error} /> : null}
+              {branchesQuery.isError && selectedRepoId !== "all" ? <ErrorBanner error={branchesQuery.error} /> : null}
+              {selectedRepoId === "all" && projectBranchesQuery.isLoading ? <LoadingBlock /> : null}
               <DataTable
                 columns={branchColumns}
                 data={branches}
                 emptyLabel="No branch data available."
+              />
+              {selectedRepoId === "all" && <ProjectPager page={branchPage} total={projectBranchesQuery.data?.total ?? 0} pageSize={200} onPage={setBranchPage} />}
+              <BranchComparisonPanel
+                repositoryId={selectedRepoId === "all" ? null : selectedRepoId}
+                branches={branches}
               />
             </Tabs.Content>
 
@@ -1133,9 +1238,12 @@ export function Dashboard() {
             >
               <SectionTitle
                 title="Pull requests"
-                subtitle={selectedRepository ? selectedRepository.name : "Select one repository"}
+                subtitle={selectedRepository ? selectedRepository.name : `${repositories.length} repositories · all pull requests`}
               />
-              {providerState && !providerState.available ? (
+              {projectPullRequestsQuery.isError && selectedRepoId === "all" ? <ErrorBanner error={projectPullRequestsQuery.error} /> : null}
+              {pullRequestsQuery.isError && selectedRepoId !== "all" ? <ErrorBanner error={pullRequestsQuery.error} /> : null}
+              {selectedRepoId === "all" && projectPullRequestsQuery.isLoading ? <LoadingBlock /> : null}
+              {providerState && !providerState.available && providerState.reason !== "unsupported_provider" ? (
                 <div className="flex items-start gap-3 rounded-md border border-warning/40 bg-panel p-4 text-sm shadow-panel">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                   <div>
@@ -1149,6 +1257,125 @@ export function Dashboard() {
                 data={pullRequests}
                 emptyLabel="No pull request metadata available."
               />
+              {selectedRepoId === "all" && <ProjectPager page={prPage} total={projectPullRequestsQuery.data?.total ?? 0} pageSize={200} onPage={setPrPage} />}
+            </Tabs.Content>
+
+            <Tabs.Content
+              value="settings"
+              className="grid gap-5 data-[state=inactive]:hidden"
+            >
+              <div>
+                <h2 className="text-xl font-semibold">Settings</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Manage projects, data collection, appearance, saved views and custom labels.
+                  Analytics stay in their dedicated tabs.
+                </p>
+              </div>
+              <section className="grid gap-3 rounded-md border border-border bg-panel p-4">
+                <h3 className="text-sm font-semibold">Workspace and repositories</h3>
+                <p className="text-xs text-muted-foreground">
+                  Import and refresh are explicit actions. GG never pushes to the analyzed repositories.
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+              <GitHubRepositoryPicker
+                projectId={selectedProjectId}
+                repositories={repositories}
+                onImported={() => {
+                  void queryClient.invalidateQueries({ queryKey: ["repositories", selectedProjectId] });
+                  void queryClient.invalidateQueries({ queryKey: ["summary", selectedProjectId] });
+                }}
+              />
+              <ProjectDialog
+                open={projectDialogOpen}
+                onOpenChange={setProjectDialogOpen}
+                pending={createProjectMutation.isPending}
+                error={createProjectMutation.error}
+                onSubmit={(input) => createProjectMutation.mutate(input)}
+              />
+              <RepositoryDialog
+                open={repositoryDialogOpen}
+                onOpenChange={setRepositoryDialogOpen}
+                disabled={!selectedProjectId}
+                pending={createRepositoryMutation.isPending}
+                error={createRepositoryMutation.error}
+                onSubmit={(input) => createRepositoryMutation.mutate(input)}
+              />
+              <IconButton
+                label="Delete project and local data"
+                onClick={() => setProjectDeleteOpen(true)}
+                disabled={!selectedProjectId || deleteProjectMutation.isPending}
+              >
+                <Trash2 className="h-4 w-4 text-danger" />
+              </IconButton>
+              <IconButton
+                label="Refresh project"
+                onClick={() => refreshProjectMutation.mutate()}
+                disabled={!selectedProjectId || refreshProjectMutation.isPending}
+              >
+                <RefreshCw className={iconClass(refreshProjectMutation.isPending)} />
+              </IconButton>
+              <IconButton
+                label="Refresh repository"
+                onClick={() => refreshRepositoryMutation.mutate()}
+                disabled={selectedRepoId === "all" || refreshRepositoryMutation.isPending}
+              >
+                <GitBranch className={iconClass(refreshRepositoryMutation.isPending)} />
+              </IconButton>
+                </div>
+              </section>
+              <section className="grid gap-2 rounded-md border border-border bg-panel p-4">
+                <h3 className="text-sm font-semibold">Appearance</h3>
+                <p className="text-xs text-muted-foreground">Choose light, dark or your operating system theme.</p>
+                <div className="flex"><ThemeToggle /></div>
+              </section>
+              <section className="grid gap-3 rounded-md border border-border bg-panel p-4">
+                <h3 className="text-sm font-semibold">Saved branch views and folder filters</h3>
+                <p className="text-xs text-muted-foreground">
+                  Configure how Git branches and folders are included in analytics.
+                </p>
+          <BranchViewControls
+            activeViewId={activeBranchViewId}
+            views={branchViews}
+            branchSettings={visibleBranchSettings}
+            selection={branchSelection}
+            folderFilters={folderFilters}
+            pending={
+              branchViewsQuery.isLoading ||
+              createBranchViewMutation.isPending ||
+              updateBranchViewMutation.isPending ||
+              deleteBranchViewMutation.isPending
+            }
+            error={branchViewError}
+            onViewChange={handleBranchViewChange}
+            onOpenEditor={() => setBranchEditorOpen(true)}
+            onSave={() => setBranchViewNameDialog({ mode: "save", initialName: "" })}
+            onUpdate={handleSaveActiveBranchView}
+            onDuplicate={() => {
+              const viewId = activeBranchViewIdRef.current;
+              const view = branchViews.find((item) => item.id === viewId);
+              setBranchViewNameDialog({
+                mode: "duplicate",
+                initialName: `${view?.name ?? "Custom"} copy`
+              });
+            }}
+            onRename={() => {
+              const viewId = activeBranchViewIdRef.current;
+              if (viewId !== "custom") {
+                const view = branchViews.find((item) => item.id === viewId);
+                setBranchViewNameDialog({
+                  mode: "rename",
+                  initialName: view?.name ?? "",
+                  viewId
+                });
+              }
+            }}
+            onDelete={handleDeleteActiveBranchView}
+          />
+
+              </section>
+              {selectedProjectId && <TagSettings projectId={selectedProjectId} />}
+              {selectedProjectId && <AnnualIdentitySettings projectId={selectedProjectId} repositoryId={selectedRepoId} />}
+              {selectedProjectId && <LocalCliSettings projectId={selectedProjectId} />}
             </Tabs.Content>
           </Tabs.Root>
         )}
@@ -1391,7 +1618,8 @@ const contributorFileTypeColumns: Array<ColumnDef<ContributorFileTypeRow>> = [
   }
 ];
 
-const branchColumns: Array<ColumnDef<Branch>> = [
+const branchColumns: Array<ColumnDef<ProjectBranch>> = [
+  { accessorKey: "repositoryName", header: "Repository" },
   { accessorKey: "name", header: "Branch" },
   {
     accessorKey: "remote",
@@ -1411,7 +1639,8 @@ const branchColumns: Array<ColumnDef<Branch>> = [
   { accessorKey: "branchTimeSource", header: "Time source" }
 ];
 
-const pullRequestColumns: Array<ColumnDef<PullRequest>> = [
+const pullRequestColumns: Array<ColumnDef<ProjectPullRequest>> = [
+  { accessorKey: "repositoryName", header: "Repository" },
   { accessorKey: "number", header: "#", cell: ({ getValue }) => `#${getValue<number>()}` },
   { accessorKey: "title", header: "Title" },
   { accessorKey: "state", header: "State" },
@@ -1431,6 +1660,21 @@ const pullRequestColumns: Array<ColumnDef<PullRequest>> = [
     cell: ({ getValue }) => formatDate(getValue<string | null>())
   }
 ];
+
+function ProjectPager({ page, total, pageSize, onPage }: {
+  page: number; total: number; pageSize: number; onPage: (page: number) => void;
+}) {
+  const pages = Math.max(1, Math.ceil(total / pageSize));
+  return (
+    <nav aria-label="Project results pages" className="flex items-center justify-end gap-3 text-xs text-muted-foreground">
+      <span className="tabular-nums">{total.toLocaleString()} entries · page {page + 1} / {pages}</span>
+      <button type="button" disabled={page <= 0} onClick={() => onPage(page - 1)}
+        className="h-9 rounded border border-border bg-panel px-3 disabled:opacity-40">Previous</button>
+      <button type="button" disabled={page >= pages - 1} onClick={() => onPage(page + 1)}
+        className="h-9 rounded border border-border bg-panel px-3 disabled:opacity-40">Next</button>
+    </nav>
+  );
+}
 
 function ContributorDetail({
   contributor,
@@ -2395,6 +2639,7 @@ function RepositoryDialog({
 }
 
 type DateRangePreset =
+  | "year"
   | "all"
   | "month"
   | "previous-month"
@@ -2405,6 +2650,7 @@ type DateRangePreset =
   | "custom";
 
 const dateRangePresetItems: Array<{ value: DateRangePreset; label: string }> = [
+  { value: "year", label: "Year to date" },
   { value: "all", label: "All time" },
   { value: "month", label: "This month" },
   { value: "previous-month", label: "Previous month" },
@@ -2856,7 +3102,8 @@ function readStoredDateRange(): StoredDateRange | null {
   }
 
   try {
-    const rawValue = window.localStorage.getItem(DATE_RANGE_STORAGE_KEY);
+    const rawValue = window.localStorage.getItem(DATE_RANGE_STORAGE_KEY) ??
+      window.localStorage.getItem("gita.dashboardDateRange");
     if (!rawValue) {
       return null;
     }
@@ -2921,6 +3168,10 @@ function resolveDatePreset(
   now: Date
 ): { from: string; to: string; monthCursor: Date } {
   const today = startOfDay(now);
+
+  if (preset === "year") {
+    return { ...currentYearToDate(today), monthCursor: startOfMonth(today) };
+  }
 
   if (preset === "all") {
     return { from: "", to: "", monthCursor: startOfMonth(today) };

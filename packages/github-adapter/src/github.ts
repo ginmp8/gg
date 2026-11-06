@@ -1,5 +1,5 @@
-import type { ProviderState, PullRequest } from "@gita/core";
-import { runProcess, type GitCommandResult } from "@gita/git-engine";
+import type { ProviderState, PullRequest } from "@gg/core";
+import { isGitHubMetadataAllowed, runProcess, type GitCommandResult } from "@gg/git-engine";
 import { z } from "zod";
 
 export interface GhRunner {
@@ -109,6 +109,14 @@ export function createGitHubAdapter(runner: GhRunner = defaultGhRunner): GitHubA
 }
 
 async function checkStatus(runner: GhRunner): Promise<ProviderState> {
+  if (!isGitHubMetadataAllowed()) {
+    return {
+      available: false,
+      reason: "network_disabled",
+      message: "GitHub metadata is disabled by GG_OFFLINE=1 or GG_ALLOW_GITHUB_METADATA=0."
+    };
+  }
+
   try {
     await runner(["auth", "status"]);
     return {

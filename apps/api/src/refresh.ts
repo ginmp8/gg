@@ -1,7 +1,8 @@
 import { performance } from "node:perf_hooks";
 
-import { createGitHubAdapter } from "@gita/github-adapter";
-import { analyzeRepository, ensureMirrorRepository, GitCommandError } from "@gita/git-engine";
+import { createGitHubAdapter } from "@gg/github-adapter";
+import { indexAnnualRepository } from "./annual";
+import { analyzeRepository, ensureMirrorRepository, GitCommandError } from "@gg/git-engine";
 import {
   createRefreshRun,
   getRefreshRun,
@@ -10,22 +11,22 @@ import {
   replacePullRequests,
   storeRepositoryAnalysis,
   updateRefreshRun,
-  type GitaDatabase
-} from "@gita/db";
+  type GGDatabase
+} from "@gg/db";
 
-export function enqueueRepositoryRefresh(database: GitaDatabase, runId: string, repoId: string): void {
+export function enqueueRepositoryRefresh(database: GGDatabase, runId: string, repoId: string): void {
   setTimeout(() => {
     void refreshRepositoryRun(database, runId, repoId);
   }, 0);
 }
 
-export function enqueueProjectRefresh(database: GitaDatabase, runId: string, projectId: string): void {
+export function enqueueProjectRefresh(database: GGDatabase, runId: string, projectId: string): void {
   setTimeout(() => {
     void refreshProjectRun(database, runId, projectId);
   }, 0);
 }
 
-async function refreshProjectRun(database: GitaDatabase, runId: string, projectId: string): Promise<void> {
+async function refreshProjectRun(database: GGDatabase, runId: string, projectId: string): Promise<void> {
   const repos = await listRepositories(database, projectId);
   await updateRefreshRun(database, runId, {
     status: "running",
@@ -86,7 +87,7 @@ interface RepositoryRefreshProgress {
 }
 
 async function refreshRepositoryRun(
-  database: GitaDatabase,
+  database: GGDatabase,
   runId: string,
   repoId: string,
   onProgress?: (progress: RepositoryRefreshProgress) => Promise<void>
@@ -119,7 +120,10 @@ async function refreshRepositoryRun(
     const fetchResult = await ensureMirrorRepository({
       fetchUrl: repo.localPath ?? repo.url,
       cachePath: repo.cachePath,
-      reposRoot: database.paths.reposDir
+      reposRoot: database.paths.reposDir,
+      // This worker is reached only from explicit POST Refresh actions.
+      // No network fetch is scheduled when the dashboard merely loads.
+      userInitiated: true
     });
     gitFetchMs = fetchResult.gitFetchMs;
     await updateRefreshRun(database, runId, {
@@ -135,6 +139,12 @@ async function refreshRepositoryRun(
     const analysis = await analyzeRepository(repo.cachePath, repo.defaultBranch);
     analysisMs = Math.round(performance.now() - analysisStart);
     storeRepositoryAnalysis(database, repo, analysis);
+    await updateRefreshRun(database, runId, {
+      currentStep: "Indexing annual contribution incrementally",
+      currentRepositoryName: repo.name
+    });
+    await onProgress?.({ currentStep: "Indexing annual contribution incrementally" });
+    await indexAnnualRepository(database, repo);
     const githubOwnerRepo = repo.provider === "github" ? repo.githubOwnerRepo : null;
     const shouldFetchProvider = Boolean(githubOwnerRepo);
     await updateRefreshRun(database, runId, {

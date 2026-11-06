@@ -1,8 +1,10 @@
 "use client";
 
-import type { ActivityBucket } from "@gita/core";
+import type { ActivityBucket } from "@gg/core";
 import * as echarts from "echarts";
 import { useEffect, useRef } from "react";
+
+import { bindChartTheme } from "@/lib/chart-theme";
 
 export function ActivityChart({ data }: { data: ActivityBucket[] }) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -81,7 +83,10 @@ export function ActivityChart({ data }: { data: ActivityBucket[] }) {
       ]
     });
 
+    const unbindTheme = bindChartTheme(chart);
+
     return () => {
+      unbindTheme();
       resizeObserver.disconnect();
       chart.dispose();
     };

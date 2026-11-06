@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import type { RepositoryFile } from "@gita/core";
+import type { RepositoryFile } from "@gg/core";
 
 export function parseLsTreeFiles(
   stdout: string,

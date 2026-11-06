@@ -1,0 +1,151 @@
+name: Desktop CI and GitHub Release
+
+on:
+  pull_request:
+  push:
+    branches: [development]
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish a GitHub Release from this version tag (no npm publication)'
+        type: boolean
+        required: true
+        default: false
+
+permissions:
+  contents: read
+
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+
+concurrency:
+  group: gg-desktop-${{ github.workflow }}-${{ github.ref }}
+  # Only PR updates cancel obsolete desktop builds. Tags and explicitly
+  # approved release jobs are never cancelled by newer commits.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  verify:
+    name: Verify existing application
+    runs-on: ubuntu-22.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run desktop:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test
+      - run: npm run build
+      - run: npm audit --omit=dev --audit-level=high
+
+  package:
+    # Packaging runs even when dependency audits fail so we can diagnose the
+    # installer independently. Publishing still requires BOTH jobs to succeed.
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 100
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            bundles: deb
+            artifact: linux-x64
+          - os: windows-2022
+            target: x86_64-pc-windows-msvc
+            bundles: nsis
+            artifact: windows-x64
+          - os: macos-15
+            target: aarch64-apple-darwin
+            bundles: dmg
+            artifact: macos-arm64
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: '24'
+          cache: npm
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+      - name: Install Tauri native packages (Linux only)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+      - name: Install reproducible Node dependencies
+        run: npm ci
+      - name: Verify bundled Tauri CLI
+        shell: bash
+        run: node node_modules/@tauri-apps/cli/tauri.js --version
+      - name: Verify native target architecture
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          test "$(rustc -vV | sed -n 's/^host: //p')" = "$TARGET"
+      - name: Build static Next.js desktop frontend
+        shell: bash
+        run: GG_DESKTOP=1 npm --workspace @gg/web run build
+      - name: Package Node.js + Fastify + native SQLite
+        run: npm run desktop:prepare
+        env:
+          TAURI_TARGET_TRIPLE: ${{ matrix.target }}
+      - name: Smoke test packaged API and authentication
+        run: node scripts/desktop/smoke.mjs
+      - name: Generate application icons from the checked-in SVG
+        working-directory: apps/desktop
+        run: node ../../node_modules/@tauri-apps/cli/tauri.js icon ../../assets/gg-desktop-icon.svg
+      - name: Build Tauri installer
+        working-directory: apps/desktop
+        env:
+          BUNDLES: ${{ matrix.bundles }}
+        shell: bash
+        run: node ../../node_modules/@tauri-apps/cli/tauri.js build --bundles "$BUNDLES"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: gg-analytics-desktop-${{ matrix.artifact }}
+          path: apps/desktop/src-tauri/target/release/bundle/
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish signed-off GitHub release
+    needs: [verify, package]
+    if: github.event_name == 'workflow_dispatch' && inputs.publish == true && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-22.04
+    timeout-minutes: 12
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - name: Require tag to match the Tauri version
+        shell: bash
+        run: |
+          actual=$(node -p "require('./apps/desktop/src-tauri/tauri.conf.json').version")
+          test "$GITHUB_REF_NAME" = "v$actual"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: gg-analytics-desktop-*
+          path: release-assets
+          merge-multiple: false
+      - name: Publish GitHub Release (never npm)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mapfile -d '' installers < <(find release-assets -type f \( -name '*.exe' -o -name '*.deb' -o -name '*.dmg' \) -print0)
+          test "${#installers[@]}" -eq 3
+          test -s "docs/DESKTOP-RELEASE.md"
+          gh release create "$GITHUB_REF_NAME" "${installers[@]}" \
+            --title "GG Analytics Desktop $GITHUB_REF_NAME" \
+            --notes-file docs/DESKTOP-RELEASE.md \
+            --target "$GITHUB_SHA"

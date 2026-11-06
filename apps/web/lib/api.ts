@@ -1,23 +1,47 @@
 import type {
   ActivityBucket,
+  AnnualIdentityLink,
+  AnnualReport,
   Branch,
   BranchView,
   BranchScope,
+  BranchComparison,
   ContributorFileTypeRow,
   ContributorLeaderboardRow,
   FileTypeAnalyticsRow,
   HotFileAnalyticsRow,
   Project,
+  ProjectTag,
+  TagsSnapshot,
+  TagTargetPage,
+  TagTargetType,
   ProjectSummary,
   ProviderState,
   PullRequest,
+  ProjectBranch,
+  ProjectPullRequest,
   RefreshRun,
   RepositoryFolderFilter,
   Repository,
   RepositoryComparisonRow
-} from "@gita/core";
+} from "@gg/core";
 
-const API_URL = process.env.NEXT_PUBLIC_GITA_API_URL ?? "http://127.0.0.1:4443";
+const API_URL = process.env.NEXT_PUBLIC_GG_API_URL ?? process.env.NEXT_PUBLIC_GITA_API_URL ?? "http://127.0.0.1:4443";
+
+// Injected at document start by the trusted native Tauri window only.
+// The normal browser/self-hosted workflow does not receive a session token.
+declare global {
+  interface Window {
+    __GG_DESKTOP__?: Readonly<{ apiBase: string; token: string }>;
+  }
+}
+
+function backendConnection(): { apiBase: string; token?: string } {
+  if (typeof window !== "undefined" && window.__GG_DESKTOP__) {
+    return window.__GG_DESKTOP__;
+  }
+  return { apiBase: API_URL };
+}
 
 export interface ProjectSummaryResponse extends ProjectSummary {
   repositoryComparison: RepositoryComparisonRow[];
@@ -45,6 +69,59 @@ export interface DashboardFilters {
   offset?: number;
 }
 
+
+export function getProjectTags(projectId: string): Promise<TagsSnapshot> {
+  return apiRequest("/api/projects/" + encodeURIComponent(projectId) + "/tags");
+}
+export function createTag(projectId: string, input: { name: string; group: string }): Promise<ProjectTag> {
+  return apiRequest("/api/projects/" + encodeURIComponent(projectId) + "/tags", {
+    method: "POST", body: JSON.stringify(input)
+  });
+}
+export function updateTag(projectId: string, tagId: string, input: { name: string; group: string }): Promise<ProjectTag> {
+  return apiRequest("/api/projects/" + encodeURIComponent(projectId) + "/tags/" + encodeURIComponent(tagId), {
+    method: "PATCH", body: JSON.stringify(input)
+  });
+}
+export function deleteTag(projectId: string, tagId: string): Promise<void> {
+  return apiRequest("/api/projects/" + encodeURIComponent(projectId) + "/tags/" + encodeURIComponent(tagId), {
+    method: "DELETE"
+  });
+}
+export function getTagTargets(projectId: string, type: TagTargetType, search = ""): Promise<TagTargetPage> {
+  return apiRequest("/api/projects/" + encodeURIComponent(projectId) +
+    "/tag-targets?" + new URLSearchParams({ type, search }).toString());
+}
+
+export function setTagAssignmentsBulk(
+  projectId: string, tagId: string, targetType: TagTargetType, targetKeys: string[]
+): Promise<{ assigned: number }> {
+  return apiRequest("/api/projects/" + encodeURIComponent(projectId) + "/tags/" +
+    encodeURIComponent(tagId) + "/assignments/bulk", {
+      method: "POST", body: JSON.stringify({ targetType, targetKeys })
+    });
+}
+
+export function setTagAssignment(
+  projectId: string, tagId: string, targetType: TagTargetType, targetKey: string, enabled: boolean
+): Promise<void> {
+  return apiRequest("/api/projects/" + encodeURIComponent(projectId) + "/tags/" +
+    encodeURIComponent(tagId) + "/assignments", {
+    method: enabled ? "POST" : "DELETE",
+    body: JSON.stringify({ targetType, targetKey })
+  });
+}
+
+
+export interface LocalDataHealth {
+  ok: boolean;
+  databasePath: string;
+  reposDir: string;
+}
+export function getLocalDataHealth(): Promise<LocalDataHealth> {
+  return apiRequest("/api/health");
+}
+
 export async function getProjects(): Promise<ListResponse<Project>> {
   return apiRequest("/api/projects");
 }
@@ -56,6 +133,74 @@ export async function createProject(input: {
   return apiRequest("/api/projects", {
     method: "POST",
     body: JSON.stringify(input)
+  });
+}
+
+export interface ProjectDeletionResult {
+  deleted: true;
+  removedMirrors: number;
+  cleanupComplete: boolean;
+  cleanupWarning: string | null;
+}
+
+export async function deleteProjectAndLocalData(projectId: string, confirmName: string): Promise<ProjectDeletionResult> {
+  return apiRequest(`/api/projects/${projectId}`, {
+    method: "DELETE",
+    body: JSON.stringify({ confirmName, deleteLocalData: true })
+  });
+}
+
+export async function getAnnualReport(
+  projectId: string, year: number, repositoryId?: string
+): Promise<AnnualReport> {
+  const params = new URLSearchParams({ year: String(year) });
+  if (repositoryId && repositoryId !== "all") params.set("repositoryId", repositoryId);
+  return apiRequest(`/api/projects/${projectId}/annual?${params}`);
+}
+
+export async function getAnnualIdentities(projectId: string): Promise<ListResponse<AnnualIdentityLink>> {
+  return apiRequest(`/api/projects/${projectId}/annual/identities`);
+}
+
+export async function saveAnnualIdentity(
+  projectId: string, link: AnnualIdentityLink
+): Promise<ListResponse<AnnualIdentityLink>> {
+  return apiRequest(`/api/projects/${projectId}/annual/identities`, {
+    method: "POST", body: JSON.stringify(link)
+  });
+}
+
+export async function indexAnnualProject(projectId: string): Promise<RefreshRun> {
+  return apiRequest(`/api/projects/${projectId}/annual/reindex`, { method: "POST" });
+}
+
+export async function syncAnnualGitHub(
+  projectId: string, repositoryId?: string
+): Promise<{ items: Array<{ repoId: string; received: number; complete: boolean }> }> {
+  return apiRequest(`/api/projects/${projectId}/annual/github-sync`, {
+    method: "POST",
+    body: JSON.stringify(repositoryId && repositoryId !== "all" ? { repositoryId } : {})
+  });
+}
+
+export interface GitHubDiscoveredRepository {
+  fullName: string;
+  cloneUrl: string;
+  isPrivate: boolean;
+  archived: boolean;
+  pushedAt: string | null;
+  defaultBranch: string | null;
+}
+
+export async function discoverGitHubRepositories(): Promise<ListResponse<GitHubDiscoveredRepository>> {
+  return apiRequest("/api/github/discover", { method: "POST", body: JSON.stringify({ limit: 5000 }) });
+}
+
+export async function bulkImportGitHubRepositories(
+  projectId: string, repositories: string[]
+): Promise<{ items: Repository[]; skipped: string[] }> {
+  return apiRequest(`/api/projects/${projectId}/repositories/bulk`, {
+    method: "POST", body: JSON.stringify({ repositories })
   });
 }
 
@@ -181,10 +326,36 @@ export async function getContributorFileTypes(
   return apiRequest(`/api/projects/${projectId}/contributor-file-types${queryString(filters)}`);
 }
 
+
+export interface ProjectPage<T> extends ListResponse<T> {
+  total: number;
+}
+
+export function getProjectBranches(projectId: string, page = 0, size = 200): Promise<ProjectPage<ProjectBranch>> {
+  return apiRequest("/api/projects/" + encodeURIComponent(projectId) +
+    "/branches?limit=" + size + "&offset=" + page * size);
+}
+
+export function getProjectPullRequests(
+  projectId: string, page = 0, size = 200
+): Promise<ProjectPage<ProjectPullRequest> & { providerState: ProviderState }> {
+  return apiRequest("/api/projects/" + encodeURIComponent(projectId) +
+    "/pull-requests?limit=" + size + "&offset=" + page * size);
+}
+
 export async function getBranches(
   repoId: string
 ): Promise<ListResponse<Branch> & { branchTimeSource: string }> {
   return apiRequest(`/api/repositories/${repoId}/branches?limit=100`);
+}
+
+export async function getBranchComparison(
+  repoId: string, base: string, head: string, limit = 500
+): Promise<BranchComparison> {
+  const params = new URLSearchParams({
+    base, head, limit: String(limit)
+  });
+  return apiRequest(`/api/repositories/${repoId}/compare?${params}`);
 }
 
 export async function getPullRequests(repoId: string): Promise<PullRequestResponse> {
@@ -222,7 +393,12 @@ async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
     headers.set("content-type", "application/json");
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
+  const backend = backendConnection();
+  if (backend.token) {
+    headers.set("authorization", `Bearer ${backend.token}`);
+  }
+
+  const response = await fetch(`${backend.apiBase}${path}`, {
     ...init,
     headers
   });

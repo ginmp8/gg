@@ -8,11 +8,12 @@ import type {
   CommitRecord,
   Provider,
   RepositoryFile
-} from "@gita/core";
+} from "@gg/core";
 
 import { applyLineCounts, parseGrepLineCounts, parseLsTreeFiles } from "./files";
 import { parseGitLog } from "./parser";
 import { GitCommandError, runGit } from "./command";
+import { isRemoteGitAllowed } from "./network-policy";
 
 export interface ResolvedRepositoryInput {
   originalInput: string;
@@ -58,6 +59,21 @@ export function resolveRepositoryInput(
   }
 
   if (HTTPS_URL.test(trimmed) || SSH_URL.test(trimmed)) {
+    if (HTTPS_URL.test(trimmed) && (process.env.GG_ALLOW_URL_CREDENTIALS ?? process.env.GITA_ALLOW_URL_CREDENTIALS) !== "1") {
+      const remoteUrl = new URL(trimmed);
+      const credentialQueryKeys = new Set([
+        "token", "access_token", "auth", "authorization", "password",
+        "private_token", "client_secret", "api_key"
+      ]);
+      const hasCredentialQuery = Array.from(remoteUrl.searchParams.keys())
+        .some((key) => credentialQueryKeys.has(key.toLowerCase()));
+      if (remoteUrl.username || remoteUrl.password || hasCredentialQuery) {
+        throw new Error(
+          "Repository URL contains embedded credentials. Use a Git credential helper, " +
+          "or explicitly opt in with GG_ALLOW_URL_CREDENTIALS=1."
+        );
+      }
+    }
     const githubOwnerRepo = parseGitHubOwnerRepo(trimmed);
     return {
       originalInput: trimmed,
@@ -92,7 +108,7 @@ export function assertAppOwnedCachePath(cachePath: string, reposRoot: string): v
     : `${resolvedRoot}${path.sep}`;
 
   if (resolvedCache !== resolvedRoot && !resolvedCache.startsWith(rootWithSeparator)) {
-    throw new Error("Repository cache path must be inside the app-owned .gita/repos directory.");
+    throw new Error("Repository cache path must be inside the app-owned .gg/repos directory.");
   }
 }
 
@@ -100,20 +116,39 @@ export async function ensureMirrorRepository(params: {
   fetchUrl: string;
   cachePath: string;
   reposRoot: string;
+  /** Set only for a refresh explicitly requested by the user. */
+  userInitiated?: boolean;
 }): Promise<{ gitFetchMs: number; operation: "clone" | "fetch" }> {
   assertAppOwnedCachePath(params.cachePath, params.reposRoot);
+  const isRemote = !path.isAbsolute(params.fetchUrl);
+  if (isRemote && !isRemoteGitAllowed(process.env, params.userInitiated === true)) {
+    throw new Error(
+      "Remote Git access is disabled. Use an explicit Refresh action or " +
+      "set GG_ALLOW_REMOTE_GIT=1; check GG_OFFLINE=1 and GG_ALLOW_REMOTE_GIT=0."
+    );
+  }
   fs.mkdirSync(path.dirname(params.cachePath), { recursive: true });
+  const options = {
+    timeoutMs: 300_000,
+    // A local source must not contact a network remote, even when global
+    // remote-Git opt-in is configured.
+    allowRemoteGit: isRemote
+      ? (params.userInitiated === true ? true : undefined)
+      : false
+  };
 
   if (fs.existsSync(params.cachePath)) {
-    const result = await runGit(["-C", params.cachePath, "fetch", "--prune"], {
-      timeoutMs: 300_000
-    });
+    // Git -c remote.origin.url=... ADDS another URL rather than replacing
+    // cached ones. Fetch by the registered URL with the mirror refspec to
+    // prevent an altered origin from contacting a different remote.
+    const args = isRemote
+      ? ["-C", params.cachePath, "fetch", "--prune", params.fetchUrl, "+refs/*:refs/*"]
+      : ["-C", params.cachePath, "fetch", "--prune"];
+    const result = await runGit(args, options);
     return { gitFetchMs: result.durationMs, operation: "fetch" };
   }
 
-  const result = await runGit(["clone", "--mirror", params.fetchUrl, params.cachePath], {
-    timeoutMs: 300_000
-  });
+  const result = await runGit(["clone", "--mirror", params.fetchUrl, params.cachePath], options);
   return { gitFetchMs: result.durationMs, operation: "clone" };
 }
 

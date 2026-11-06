@@ -1,10 +1,12 @@
 import path from "node:path";
 
-import { chooseDisplayName, normalizeEmail, normalizeIdentityKey } from "@gita/core";
+import { chooseDisplayName, normalizeEmail, normalizeIdentityKey } from "@gg/core";
 import type {
   ActivityBucket,
   AnalyticsFilters,
   Branch,
+  ProjectBranch,
+  ProjectPullRequest,
   BranchView,
   CommitBranchMembership,
   CommitFileStat,
@@ -23,10 +25,10 @@ import type {
   RepositoryFile,
   Repository,
   RepositoryComparisonRow
-} from "@gita/core";
+} from "@gg/core";
 import { desc, eq } from "drizzle-orm";
 
-import type { GitaDatabase } from "./client";
+import type { GGDatabase } from "./client";
 import { branchViews, projects, refreshRuns, repositories } from "./schema";
 
 type BranchViewRow = typeof branchViews.$inferSelect;
@@ -57,12 +59,12 @@ interface QueryFilters {
   offset: number;
 }
 
-export async function listProjects(database: GitaDatabase): Promise<Project[]> {
+export async function listProjects(database: GGDatabase): Promise<Project[]> {
   return database.db.select().from(projects).orderBy(desc(projects.updatedAt));
 }
 
 export async function createProject(
-  database: GitaDatabase,
+  database: GGDatabase,
   input: { name: string; description?: string | null }
 ): Promise<Project> {
   const now = new Date().toISOString();
@@ -78,7 +80,7 @@ export async function createProject(
 }
 
 export async function getProject(
-  database: GitaDatabase,
+  database: GGDatabase,
   projectId: string
 ): Promise<Project | null> {
   const [project] = await database.db
@@ -90,7 +92,7 @@ export async function getProject(
 }
 
 export async function updateProject(
-  database: GitaDatabase,
+  database: GGDatabase,
   projectId: string,
   input: { name?: string; description?: string | null }
 ): Promise<Project | null> {
@@ -111,13 +113,13 @@ export async function updateProject(
   return getProject(database, projectId);
 }
 
-export async function deleteProject(database: GitaDatabase, projectId: string): Promise<boolean> {
+export async function deleteProject(database: GGDatabase, projectId: string): Promise<boolean> {
   const result = database.sqlite.prepare("DELETE FROM projects WHERE id = ?").run(projectId);
   return result.changes > 0;
 }
 
 export async function listBranchViews(
-  database: GitaDatabase,
+  database: GGDatabase,
   projectId: string
 ): Promise<BranchView[]> {
   const rows = await database.db
@@ -129,7 +131,7 @@ export async function listBranchViews(
 }
 
 export async function getBranchView(
-  database: GitaDatabase,
+  database: GGDatabase,
   branchViewId: string
 ): Promise<BranchView | null> {
   const [view] = await database.db
@@ -141,7 +143,7 @@ export async function getBranchView(
 }
 
 export async function createBranchView(
-  database: GitaDatabase,
+  database: GGDatabase,
   projectId: string,
   input: { name: string; branches: string[]; folderFilters?: RepositoryFolderFilter[] }
 ): Promise<BranchView> {
@@ -160,7 +162,7 @@ export async function createBranchView(
 }
 
 export async function updateBranchView(
-  database: GitaDatabase,
+  database: GGDatabase,
   branchViewId: string,
   input: { name?: string; branches?: string[]; folderFilters?: RepositoryFolderFilter[] }
 ): Promise<BranchView | null> {
@@ -188,7 +190,7 @@ export async function updateBranchView(
 }
 
 export async function deleteBranchView(
-  database: GitaDatabase,
+  database: GGDatabase,
   branchViewId: string
 ): Promise<boolean> {
   const result = database.sqlite.prepare("DELETE FROM branch_views WHERE id = ?").run(branchViewId);
@@ -196,7 +198,7 @@ export async function deleteBranchView(
 }
 
 export async function listRepositories(
-  database: GitaDatabase,
+  database: GGDatabase,
   projectId: string
 ): Promise<Repository[]> {
   const rows = await database.db
@@ -208,7 +210,7 @@ export async function listRepositories(
 }
 
 export async function getRepository(
-  database: GitaDatabase,
+  database: GGDatabase,
   repoId: string
 ): Promise<Repository | null> {
   const [repo] = await database.db
@@ -220,7 +222,7 @@ export async function getRepository(
 }
 
 export async function getRepositoryWithProviderDetails(
-  database: GitaDatabase,
+  database: GGDatabase,
   repoId: string
 ): Promise<(Repository & { githubOwnerRepo: string | null }) | null> {
   const [repo] = await database.db
@@ -232,7 +234,7 @@ export async function getRepositoryWithProviderDetails(
 }
 
 export async function createRepositoryRecord(
-  database: GitaDatabase,
+  database: GGDatabase,
   projectId: string,
   resolved: RepositoryInputForStorage
 ): Promise<Repository> {
@@ -259,7 +261,7 @@ export async function createRepositoryRecord(
 }
 
 export async function updateRepositoryRecord(
-  database: GitaDatabase,
+  database: GGDatabase,
   repoId: string,
   input: { name?: string; defaultBranch?: string | null }
 ): Promise<Repository | null> {
@@ -280,13 +282,13 @@ export async function updateRepositoryRecord(
   return getRepository(database, repoId);
 }
 
-export async function deleteRepository(database: GitaDatabase, repoId: string): Promise<boolean> {
+export async function deleteRepository(database: GGDatabase, repoId: string): Promise<boolean> {
   const result = database.sqlite.prepare("DELETE FROM repositories WHERE id = ?").run(repoId);
   return result.changes > 0;
 }
 
 export async function createRefreshRun(
-  database: GitaDatabase,
+  database: GGDatabase,
   input: {
     projectId: string;
     repositoryId: string | null;
@@ -316,7 +318,7 @@ export async function createRefreshRun(
 }
 
 export async function getRefreshRun(
-  database: GitaDatabase,
+  database: GGDatabase,
   runId: string
 ): Promise<RefreshRun | null> {
   const [run] = await database.db
@@ -328,7 +330,7 @@ export async function getRefreshRun(
 }
 
 export async function updateRefreshRun(
-  database: GitaDatabase,
+  database: GGDatabase,
   runId: string,
   input: Partial<RefreshRun>
 ): Promise<void> {
@@ -339,7 +341,7 @@ export async function updateRefreshRun(
 }
 
 export function storeRepositoryAnalysis(
-  database: GitaDatabase,
+  database: GGDatabase,
   repo: Repository,
   analysis: RepositoryAnalysisForStorage
 ): void {
@@ -491,7 +493,7 @@ export function storeRepositoryAnalysis(
 }
 
 export async function getProjectSummary(
-  database: GitaDatabase,
+  database: GGDatabase,
   projectId: string,
   filters: AnalyticsFilters = {}
 ): Promise<ProjectSummary> {
@@ -549,7 +551,7 @@ export async function getProjectSummary(
 }
 
 export async function getContributorLeaderboard(
-  database: GitaDatabase,
+  database: GGDatabase,
   projectId: string,
   filters: AnalyticsFilters = {}
 ): Promise<ContributorLeaderboardRow[]> {
@@ -585,7 +587,7 @@ export async function getContributorLeaderboard(
 }
 
 export async function getProjectActivity(
-  database: GitaDatabase,
+  database: GGDatabase,
   projectId: string,
   filters: AnalyticsFilters = {}
 ): Promise<ActivityBucket[]> {
@@ -615,7 +617,7 @@ export async function getProjectActivity(
 }
 
 export async function getRepositoryComparison(
-  database: GitaDatabase,
+  database: GGDatabase,
   projectId: string,
   filters: AnalyticsFilters = {}
 ): Promise<RepositoryComparisonRow[]> {
@@ -647,7 +649,7 @@ export async function getRepositoryComparison(
 }
 
 function getProjectSummaryFromFileStats(
-  database: GitaDatabase,
+  database: GGDatabase,
   projectId: string,
   filters: AnalyticsFilters
 ): ProjectSummary {
@@ -702,7 +704,7 @@ function getProjectSummaryFromFileStats(
 }
 
 function getContributorLeaderboardFromFileStats(
-  database: GitaDatabase,
+  database: GGDatabase,
   projectId: string,
   filters: AnalyticsFilters
 ): ContributorLeaderboardRow[] {
@@ -735,7 +737,7 @@ function getContributorLeaderboardFromFileStats(
 }
 
 function getProjectActivityFromFileStats(
-  database: GitaDatabase,
+  database: GGDatabase,
   projectId: string,
   filters: AnalyticsFilters
 ): ActivityBucket[] {
@@ -762,7 +764,7 @@ function getProjectActivityFromFileStats(
 }
 
 function getRepositoryComparisonFromFileStats(
-  database: GitaDatabase,
+  database: GGDatabase,
   projectId: string,
   filters: AnalyticsFilters
 ): RepositoryComparisonRow[] {
@@ -791,7 +793,7 @@ function getRepositoryComparisonFromFileStats(
 }
 
 export async function getFileTypeAnalytics(
-  database: GitaDatabase,
+  database: GGDatabase,
   projectId: string,
   filters: AnalyticsFilters = {}
 ): Promise<FileTypeAnalyticsRow[]> {
@@ -866,7 +868,7 @@ export async function getFileTypeAnalytics(
 }
 
 export async function getHotFiles(
-  database: GitaDatabase,
+  database: GGDatabase,
   projectId: string,
   filters: AnalyticsFilters = {}
 ): Promise<HotFileAnalyticsRow[]> {
@@ -908,7 +910,7 @@ export async function getHotFiles(
 }
 
 export async function getContributorFileTypes(
-  database: GitaDatabase,
+  database: GGDatabase,
   projectId: string,
   filters: AnalyticsFilters = {}
 ): Promise<ContributorFileTypeRow[]> {
@@ -967,7 +969,7 @@ export async function getContributorFileTypes(
 }
 
 export async function getRepositoryContributors(
-  database: GitaDatabase,
+  database: GGDatabase,
   repoId: string,
   filters: AnalyticsFilters = {}
 ): Promise<ContributorLeaderboardRow[]> {
@@ -979,7 +981,7 @@ export async function getRepositoryContributors(
 }
 
 export async function getRepositoryActivity(
-  database: GitaDatabase,
+  database: GGDatabase,
   repoId: string,
   filters: AnalyticsFilters = {}
 ): Promise<ActivityBucket[]> {
@@ -991,7 +993,7 @@ export async function getRepositoryActivity(
 }
 
 export async function getRepositorySummary(
-  database: GitaDatabase,
+  database: GGDatabase,
   repoId: string,
   filters: AnalyticsFilters = {}
 ): Promise<ProjectSummary | null> {
@@ -1002,8 +1004,48 @@ export async function getRepositorySummary(
   return getProjectSummary(database, repo.projectId, { ...filters, repositoryId: repoId });
 }
 
+
+/** Paginated, project-scoped branch inventory. One SQLite read regardless of repo count. */
+export function listProjectBranches(
+  database: GGDatabase, projectId: string, limit = 200, offset = 0
+): { items: ProjectBranch[]; total: number } {
+  const total = (database.sqlite.prepare(
+    "SELECT COUNT(*) AS count FROM branches b JOIN repositories r ON r.id=b.repo_id WHERE r.project_id=?"
+  ).get(projectId) as { count: number }).count;
+  const rows = database.sqlite.prepare(
+    "SELECT b.repo_id AS repoId, r.name AS repositoryName, b.name, " +
+    "NULLIF(b.remote, '') AS remote, b.is_default AS isDefault, " +
+    "b.head_commit_hash AS headCommitHash, b.last_commit_at AS lastCommitAt, " +
+    "b.created_at_estimate AS createdAtEstimate, b.provider_created_at AS providerCreatedAt, " +
+    "b.branch_time_source AS branchTimeSource, b.updated_at AS updatedAt " +
+    "FROM branches b JOIN repositories r ON r.id=b.repo_id " +
+    "WHERE r.project_id=? ORDER BY r.name COLLATE NOCASE, b.is_default DESC, b.name COLLATE NOCASE " +
+    "LIMIT ? OFFSET ?"
+  ).all(projectId, limit, offset) as Array<ProjectBranch & { isDefault: number | boolean }>;
+  return { items: rows.map(row => ({ ...row, isDefault: Boolean(row.isDefault) })), total };
+}
+
+/** Paginated, project-scoped PR inventory. Provider status is resolved once in the API. */
+export function listProjectPullRequests(
+  database: GGDatabase, projectId: string, limit = 200, offset = 0
+): { items: ProjectPullRequest[]; total: number } {
+  const total = (database.sqlite.prepare(
+    "SELECT COUNT(*) AS count FROM pull_requests p JOIN repositories r ON r.id=p.repo_id WHERE r.project_id=?"
+  ).get(projectId) as { count: number }).count;
+  const items = database.sqlite.prepare(
+    "SELECT p.repo_id AS repoId, r.name AS repositoryName, p.provider, p.provider_id AS providerId, " +
+    "p.number, p.title, p.state, p.author_login AS authorLogin, p.created_at AS createdAt, " +
+    "p.updated_at AS updatedAt, p.closed_at AS closedAt, p.merged_at AS mergedAt, " +
+    "p.base_branch AS baseBranch, p.head_branch AS headBranch, p.additions, p.deletions, " +
+    "p.changed_files AS changedFiles, p.review_decision AS reviewDecision, p.url " +
+    "FROM pull_requests p JOIN repositories r ON r.id=p.repo_id WHERE r.project_id=? " +
+    "ORDER BY p.updated_at DESC, r.name COLLATE NOCASE, p.number DESC LIMIT ? OFFSET ?"
+  ).all(projectId, limit, offset) as ProjectPullRequest[];
+  return { items, total };
+}
+
 export async function listBranches(
-  database: GitaDatabase,
+  database: GGDatabase,
   repoId: string,
   filters: AnalyticsFilters = {}
 ): Promise<Branch[]> {
@@ -1034,7 +1076,7 @@ export async function listBranches(
 }
 
 export async function listPullRequests(
-  database: GitaDatabase,
+  database: GGDatabase,
   repoId: string,
   filters: AnalyticsFilters = {}
 ): Promise<PullRequest[]> {
@@ -1072,7 +1114,7 @@ export async function listPullRequests(
 }
 
 export function replacePullRequests(
-  database: GitaDatabase,
+  database: GGDatabase,
   repoId: string,
   items: PullRequest[]
 ): void {
@@ -1433,7 +1475,7 @@ interface IdentityState {
   exactIdentity: Set<string>;
 }
 
-function loadIdentityState(database: GitaDatabase): IdentityState {
+function loadIdentityState(database: GGDatabase): IdentityState {
   const rows = database.sqlite
     .prepare<
       [],
@@ -1462,7 +1504,7 @@ function loadIdentityState(database: GitaDatabase): IdentityState {
 }
 
 function findOrCreateContributor(
-  database: GitaDatabase,
+  database: GGDatabase,
   state: IdentityState,
   name: string,
   email: string
@@ -1490,7 +1532,7 @@ function findOrCreateContributor(
 }
 
 function insertIdentityIfMissing(
-  database: GitaDatabase,
+  database: GGDatabase,
   state: IdentityState,
   contributorId: string,
   name: string,
