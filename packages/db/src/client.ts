@@ -74,6 +74,18 @@ export function openGitaDatabase(startDir = process.cwd()): GitaDatabase {
   };
 }
 
+/** Opens an existing Gita database for local harnesses without schema migration or write capability. */
+export function openGitaDatabaseReadOnly(startDir = process.cwd()): GitaDatabase {
+  const paths = resolveGitaPaths(startDir);
+  if (!fs.existsSync(paths.databasePath)) {
+    throw new Error("No existing Gita database at " + paths.databasePath +
+      ". Create a project and refresh it using Gita first.");
+  }
+  const sqlite = new BetterSqlite3(paths.databasePath, { readonly: true, fileMustExist: true });
+  sqlite.pragma("query_only = ON");
+  return { sqlite, db: drizzle(sqlite, { schema }), paths };
+}
+
 export function ensureGitaDirectories(paths: GitaPaths): void {
   fs.mkdirSync(paths.dataDir, { recursive: true });
   fs.mkdirSync(paths.reposDir, { recursive: true });

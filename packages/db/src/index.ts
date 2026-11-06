@@ -4,4 +4,5 @@ export * from "./project-deletion";
 export * from "./schema";
 export * from "./annual";
 export * from "./tags";
+export * from "./cli";
 export * from "./ice";

@@ -22,7 +22,8 @@
     "db:migrate": "npm --workspace @gita/db run migrate",
     "db:studio": "npm --workspace @gita/db run studio",
     "desktop:prepare": "node scripts/desktop/prepare.mjs",
-    "desktop:check": "node --test scripts/desktop/*.test.mjs"
+    "desktop:check": "node --test scripts/desktop/*.test.mjs",
+    "cli": "node --import tsx scripts/gita-cli.ts"
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",
