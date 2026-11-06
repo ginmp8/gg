@@ -104,6 +104,8 @@ describe("explicit project refresh network consent", () => {
       };
       const projectRepos = await listRepositories(database, project.id);
       expect(all.complete).toBe(true);
+      // Successful indexing is separate from the scoring cohort threshold.
+      expect(all.evidenceScores.status).toBe("insufficient_cohort");
       expect(all.coverage.map((item) => item.repoId).sort()).toEqual(
         projectRepos.map((item) => item.id).sort()
       );
@@ -119,6 +121,7 @@ describe("explicit project refresh network consent", () => {
         expect(response.statusCode).toBe(200);
         const report = response.json() as typeof all;
         expect(report.complete).toBe(true);
+        expect(report.evidenceScores.status).toBe("insufficient_cohort");
         expect(report.coverage.map((item) => item.repoId)).toEqual([repo.id]);
         expect(report.totals.commits).toBe(1);
         expect(report.contributors.map((item) => item.primaryEmail)).toEqual([

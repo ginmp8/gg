@@ -1,4 +1,4 @@
-import type { AnnualContributor, AnnualReport, IceContributorScore } from "@gg/core";
+import { ICE_GIT_POLICY, type AnnualContributor, type AnnualReport, type IceContributorScore } from "@gg/core";
 
 export type RankingMetricId =
   | "overall" | "throughput" | "delivery" | "technical"
@@ -57,6 +57,29 @@ export interface ContributorRankingSnapshot {
   cohortSize: number;
   rows: ContributorRank[];
   byEmail: Map<string, ContributorRank>;
+}
+
+/** Explain why relative scores are unavailable without conflating index health and cohort size. */
+export type ScoreAvailability =
+  | { kind: "ready" }
+  | { kind: "incomplete_history"; repositories: string[] }
+  | { kind: "insufficient_cohort"; count: number; required: number };
+
+export function getScoreAvailability(report: AnnualReport): ScoreAvailability {
+  if (!report.complete || report.evidenceScores.status === "incomplete_history") {
+    return {
+      kind: "incomplete_history",
+      repositories: report.coverage.filter(item => !item.complete).map(item => item.repositoryName)
+    };
+  }
+  if (report.evidenceScores.status === "insufficient_cohort") {
+    return {
+      kind: "insufficient_cohort",
+      count: report.contributors.length,
+      required: ICE_GIT_POLICY.minimumCohort
+    };
+  }
+  return { kind: "ready" };
 }
 
 /**

@@ -38,8 +38,17 @@ Choose **Rank by** to sort using any of those dimensions.
 Positions are calculated against the **complete project/repository/year
 cohort**, not just selected people, filtered search results, or custom tags.
 Ties share a rank (1, 1, 3); unavailable evidence shows **N/A**, not rank
-zero. Incomplete history suppresses rankings. ICE-Git components require a
-minimum scoring cohort. Commit-count rank is explicitly a volume measure,
+zero. Incomplete history suppresses rankings. ICE-Git components require at least
+three distinct contributors with commits in the selected year and repository
+scope. A successful synchronization does not guarantee a large enough cohort:
+a fully indexed repository with one or two contributors shows a **History fully
+indexed — not enough contributors** explanation, rather than suggesting that
+synchronization failed. It still ranks commit volume, with relative scores as
+**N/A**, and offers **Compare all repositories** when another repository is
+available. Check the selected year, integration branch and canonical author
+identities if fewer contributors appear than expected. An incomplete history
+instead names repositories needing indexing and directs to Settings.
+Commit-count rank is explicitly a volume measure,
 not an estimate of work quality or performance. None of the rankings is an
 objective evaluation of individuals.
 

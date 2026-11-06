@@ -200,7 +200,9 @@ export function ContributorSideBySide({
       </div>
       {viewMode === "executive" && data && (
         <ContributorRanking report={data} visibleEmails={visibleEmails}
-          selectedEmails={selectedEmails} onToggle={choose} />
+          selectedEmails={selectedEmails} onToggle={choose}
+          onCompareAllRepositories={repositoryId !== "all" && repositories.length > 1
+            ? () => onRepositoryChange("all") : undefined} />
       )}
       {viewMode === "detailed" && <>
       <div className="grid gap-3 rounded-md border border-border bg-panel p-4 lg:grid-cols-[200px_minmax(0,1fr)_auto]">

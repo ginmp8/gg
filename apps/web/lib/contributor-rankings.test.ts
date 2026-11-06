@@ -1,10 +1,12 @@
 import type { AnnualReport } from "@gg/core";
 import { describe, expect, it } from "vitest";
-import { buildContributorRankings, rankMetric } from "./contributor-rankings";
+import { buildContributorRankings, getScoreAvailability, rankMetric } from "./contributor-rankings";
 
 function fixture(complete = true, status = "ok") {
   return {
     complete,
+    year: 2026,
+    coverage: [{ repositoryName: "sample-repository", complete }],
     contributors: [
       { primaryEmail: "ada@example.test", displayName: "Ada", commits: 14 },
       { primaryEmail: "bo@example.test", displayName: "Bo", commits: 8 },
@@ -45,6 +47,23 @@ describe("executive contributor ranking", () => {
     expect(ranked.available).toBe(false);
     expect(rankMetric(ranked, "ada@example.test", "overall")).toBeNull();
     expect(rankMetric(ranked, "ada@example.test", "commits")).toBeNull();
+  });
+  it("distinguishes a complete small cohort from missing Git history", () => {
+    const small = fixture(true, "insufficient_cohort");
+    small.contributors = small.contributors.slice(0, 2);
+    small.evidenceScores.contributors = small.evidenceScores.contributors.slice(0, 2);
+    expect(getScoreAvailability(small)).toEqual({
+      kind: "insufficient_cohort", count: 2, required: 3
+    });
+    expect(rankMetric(buildContributorRankings(small), "ada@example.test", "commits")).toMatchObject({
+      rank: 1, cohort: 2
+    });
+    expect(rankMetric(buildContributorRankings(small), "ada@example.test", "overall")).toBeNull();
+
+    expect(getScoreAvailability(fixture(false, "incomplete_history"))).toEqual({
+      kind: "incomplete_history", repositories: ["sample-repository"]
+    });
+    expect(getScoreAvailability(fixture())).toEqual({ kind: "ready" });
   });
   it("does not fabricate overall scores when the cohort is too small", () => {
     const ranked = buildContributorRankings(fixture(true, "insufficient_cohort"));

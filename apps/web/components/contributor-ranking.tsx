@@ -3,7 +3,7 @@
 import type { AnnualReport } from "@gg/core";
 import { useMemo, useState } from "react";
 import {
-  buildContributorRankings, rankMetric, RANKING_METRICS,
+  buildContributorRankings, getScoreAvailability, rankMetric, RANKING_METRICS,
   type RankingMetricId, type RankedMetric
 } from "@/lib/contributor-rankings";
 
@@ -12,6 +12,7 @@ type Props = {
   visibleEmails: ReadonlySet<string>;
   selectedEmails: ReadonlySet<string>;
   onToggle: (email: string) => void;
+  onCompareAllRepositories?: () => void;
 };
 
 function formatRankValue(value: RankedMetric | null, kind: "score" | "volume"): string {
@@ -21,22 +22,24 @@ function formatRankValue(value: RankedMetric | null, kind: "score" | "volume"): 
 }
 
 export function ContributorRanking({
-  report, visibleEmails, selectedEmails, onToggle
+  report, visibleEmails, selectedEmails, onToggle, onCompareAllRepositories
 }: Props) {
   const [sortMetric, setSortMetric] = useState<RankingMetricId>("overall");
   const [onlySelected, setOnlySelected] = useState(false);
   const snapshot = useMemo(() => buildContributorRankings(report), [report]);
+  const availability = getScoreAvailability(report);
+  const activeSortMetric = snapshot.available ? sortMetric : "commits";
   const ranked = snapshot.rows.filter(row =>
     visibleEmails.has(row.email) && (!onlySelected || selectedEmails.has(row.email))
   ).sort((a, b) => {
-    const left = rankMetric(snapshot, a.email, sortMetric)?.rank ?? Number.POSITIVE_INFINITY;
-    const right = rankMetric(snapshot, b.email, sortMetric)?.rank ?? Number.POSITIVE_INFINITY;
+    const left = rankMetric(snapshot, a.email, activeSortMetric)?.rank ?? Number.POSITIVE_INFINITY;
+    const right = rankMetric(snapshot, b.email, activeSortMetric)?.rank ?? Number.POSITIVE_INFINITY;
     return left - right || a.displayName.localeCompare(b.displayName) || a.email.localeCompare(b.email);
   });
-  const metric = RANKING_METRICS.find(item => item.id === sortMetric)!;
-  const highlights = [
-    RANKING_METRICS[0]!, RANKING_METRICS[1]!, RANKING_METRICS[4]!
-  ];
+  const metric = RANKING_METRICS.find(item => item.id === activeSortMetric)!;
+  const highlights = snapshot.available
+    ? [RANKING_METRICS[0]!, RANKING_METRICS[1]!, RANKING_METRICS[4]!]
+    : report.complete ? [RANKING_METRICS[7]!] : [];
 
   return (
     <section aria-label="Executive contributor ranking" className="grid gap-4">
@@ -52,11 +55,11 @@ export function ContributorRanking({
         <div className="flex flex-wrap items-end gap-3">
           <label className="grid gap-1 text-xs text-muted-foreground">
             Rank by
-            <select aria-label="Ranking metric" value={sortMetric}
+            <select aria-label="Ranking metric" value={activeSortMetric}
               onChange={event => setSortMetric(event.target.value as RankingMetricId)}
               className="h-10 min-w-48 rounded border border-border bg-background px-2 text-sm text-foreground">
               {RANKING_METRICS.map(item => (
-                <option key={item.id} value={item.id}>{item.label}</option>
+                <option key={item.id} value={item.id} disabled={!snapshot.available && item.kind === "score"}>{item.label}</option>
               ))}
             </select>
           </label>
@@ -68,13 +71,42 @@ export function ContributorRanking({
         </div>
       </div>
 
-      {!snapshot.available && <p role="status" className="rounded border border-warning/60 p-3 text-sm text-warning">
-        Overall and component scores require fully indexed repositories and at least three
-        contributors in the scoring cohort. Missing scores are shown as N/A, never ranked as zero.
-        See Settings → Data synchronization if history is missing.
-      </p>}
+      {availability.kind === "incomplete_history" && (
+        <div role="status" className="rounded border border-warning/60 p-3 text-sm">
+          <p className="font-semibold">Repository history is not fully indexed.</p>
+          <p className="mt-1 text-muted-foreground">
+            {availability.repositories.length > 0
+              ? `Incomplete or outdated history: ${availability.repositories.join(", ")}.`
+              : "No complete repository history is available."}
+            {" "}Use Settings → Data synchronization → Sync repositories + metrics.
+            Scores and rankings are withheld until the selected history is complete.
+          </p>
+        </div>
+      )}
+      {availability.kind === "insufficient_cohort" && (
+        <div role="status" className="rounded border border-border bg-panel p-4 text-sm">
+          <p className="font-semibold">History fully indexed — not enough contributors for relative scores.</p>
+          <p className="mt-1 text-muted-foreground">
+            This repository scope has <strong>{availability.count}</strong> distinct
+            {availability.count === 1 ? " contributor" : " contributors"} with commits in
+            {" "}{report.year}. ICE-Git and GG-Throughput require at least
+            {" "}<strong>{availability.required}</strong> contributors in the selected year and scope.
+            Repeating synchronization will not change this unless the Git history or author attribution changes.
+          </p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Commit-volume positions remain available; relative score columns display N/A.
+            Check the year, integration branch and author identities if you expected more contributors.
+          </p>
+          {onCompareAllRepositories && (
+            <button type="button" onClick={onCompareAllRepositories}
+              className="mt-3 rounded border border-border px-3 py-2 text-sm font-medium hover:bg-muted">
+              Compare all repositories
+            </button>
+          )}
+        </div>
+      )}
 
-      <div className="grid gap-3 md:grid-cols-3">
+      {highlights.length > 0 && <div className="grid gap-3 md:grid-cols-3">
         {highlights.map(item => {
           const leaders = snapshot.rows.filter(row => rankMetric(snapshot, row.email, item.id)?.rank === 1);
           const winner = leaders[0];
@@ -82,7 +114,8 @@ export function ContributorRanking({
           return (
             <div key={item.id} className="rounded-lg border border-border bg-panel p-4">
               <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {item.id === "overall" ? "Overall leader" :
+                {item.id === "commits" ? "Most commits (volume only)" :
+                  item.id === "overall" ? "Overall leader" :
                   item.id === "throughput" ? "Technical pace leader" : "Tests & docs leader"}
               </div>
               <div className="mt-2 truncate text-lg font-semibold" title={winner?.displayName}>
@@ -96,7 +129,7 @@ export function ContributorRanking({
             </div>
           );
         })}
-      </div>
+      </div>}
 
       <div className="overflow-hidden rounded-lg border border-border bg-panel">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-3">
@@ -122,7 +155,7 @@ export function ContributorRanking({
                   <th scope="col" key={item.id}
                     title={item.description}
                     className={"min-w-28 px-3 py-3 text-center font-medium " +
-                      (item.id === sortMetric ? "text-accent" : "")}>
+                      (item.id === activeSortMetric ? "text-accent" : "")}>
                     {item.label}
                   </th>
                 ))}
@@ -151,7 +184,7 @@ export function ContributorRanking({
                       <td key={item.id}
                         title={item.description}
                         className={"px-3 py-2 text-center tabular-nums " +
-                          (item.id === sortMetric ? "bg-accent/5" : "")}>
+                          (item.id === activeSortMetric ? "bg-accent/5" : "")}>
                         {rank ? (
                           <div>
                             <span className={rank.rank === 1 ? "font-bold text-accent" : "font-semibold"}>
@@ -161,7 +194,7 @@ export function ContributorRanking({
                               {item.kind === "score" ? rank.value.toFixed(1) + " pts" :
                                 rank.value.toLocaleString("en-US")}
                             </span>
-                            {item.id === sortMetric && item.kind === "score" && (
+                            {item.id === activeSortMetric && item.kind === "score" && (
                               <div className="mx-auto mt-1.5 h-1.5 w-20 overflow-hidden rounded-full bg-muted">
                                 <div className="h-full rounded-full bg-accent"
                                   style={{ width: `${Math.max(0, Math.min(100, rank.value))}%` }} />
