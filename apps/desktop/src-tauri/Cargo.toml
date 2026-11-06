@@ -1,6 +1,6 @@
 [package]
 name = "gita-desktop"
-version = "0.1.0"
+version = "0.2.0"
 description = "Local-first Git analytics desktop"
 authors = ["Gita contributors"]
 edition = "2021"

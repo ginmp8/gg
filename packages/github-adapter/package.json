@@ -1,6 +1,6 @@
 {
   "name": "@gita/github-adapter",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -15,8 +15,8 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@gita/core": "0.1.0",
-    "@gita/git-engine": "0.1.0",
+    "@gita/core": "0.2.0",
+    "@gita/git-engine": "0.2.0",
     "zod": "4.6.7"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 {
   "name": "@gita/db",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -18,7 +18,7 @@
     "studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@gita/core": "0.1.0",
+    "@gita/core": "0.2.0",
     "better-sqlite3": "^12.10.0",
     "drizzle-orm": "0.45.4",
     "zod": "4.6.7"

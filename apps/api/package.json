@@ -1,6 +1,6 @@
 {
   "name": "@gita/api",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,10 +12,10 @@
   },
   "dependencies": {
     "@fastify/cors": "^11.0.1",
-    "@gita/core": "0.1.0",
-    "@gita/db": "0.1.0",
-    "@gita/git-engine": "0.1.0",
-    "@gita/github-adapter": "0.1.0",
+    "@gita/core": "0.2.0",
+    "@gita/db": "0.2.0",
+    "@gita/git-engine": "0.2.0",
+    "@gita/github-adapter": "0.2.0",
     "fastify": "5.12.8",
     "zod": "4.6.7"
   },
