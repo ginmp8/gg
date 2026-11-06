@@ -124,6 +124,27 @@ export async function syncAnnualGitHub(
   });
 }
 
+export interface GitHubDiscoveredRepository {
+  fullName: string;
+  cloneUrl: string;
+  isPrivate: boolean;
+  archived: boolean;
+  pushedAt: string | null;
+  defaultBranch: string | null;
+}
+
+export async function discoverGitHubRepositories(): Promise<ListResponse<GitHubDiscoveredRepository>> {
+  return apiRequest("/api/github/discover", { method: "POST", body: JSON.stringify({ limit: 5000 }) });
+}
+
+export async function bulkImportGitHubRepositories(
+  projectId: string, repositories: string[]
+): Promise<{ items: Repository[]; skipped: string[] }> {
+  return apiRequest(`/api/projects/${projectId}/repositories/bulk`, {
+    method: "POST", body: JSON.stringify({ repositories })
+  });
+}
+
 export async function getBranchViews(projectId: string): Promise<ListResponse<BranchView>> {
   return apiRequest(`/api/projects/${projectId}/branch-views`);
 }

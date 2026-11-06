@@ -129,6 +129,20 @@ API runs at [http://127.0.0.1:4443](http://127.0.0.1:4443).
 The database and required runtime directories are created automatically on
 first start.
 
+### GitHub CLI discovery and bulk registration
+
+The **GitHub import** button in the dashboard header can list repositories you
+can access with the already authenticated `gh` CLI. Listing is **explicit**,
+never a side effect of opening the UI; it requires
+`GITA_ALLOW_GITHUB_METADATA=1`. The picker filters by owner, visibility,
+archived status and name, and can register up to **25 repositories** per
+click. Listing and registration store metadata only. Click **Refresh
+project** to clone their Git mirrors into the local app cache.
+
+For private HTTPS repositories, ensure Git's configured credential helper can
+authenticate; you may use `gh auth setup-git` after `gh auth login`.
+The picker never reads or stores the GitHub token itself.
+
 ### Add your first repository
 
 1. Create a project from the dashboard.

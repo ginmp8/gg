@@ -48,6 +48,7 @@ import type {
 import { ActivityChart } from "@/components/activity-chart";
 import { AnnualAnalytics } from "@/components/annual-analytics";
 import { BranchComparisonPanel } from "@/components/branch-comparison";
+import { GitHubRepositoryPicker } from "@/components/github-repository-picker";
 import {
   ContributorComparisonChart,
   ContributorFileTypeShareChart
@@ -663,6 +664,14 @@ export function Dashboard() {
             <div className="flex flex-wrap items-center gap-2">
               {currentRun ? <RefreshStatus run={currentRun} /> : null}
               <ThemeToggle />
+              <GitHubRepositoryPicker
+                projectId={selectedProjectId}
+                repositories={repositories}
+                onImported={() => {
+                  void queryClient.invalidateQueries({ queryKey: ["repositories", selectedProjectId] });
+                  void queryClient.invalidateQueries({ queryKey: ["summary", selectedProjectId] });
+                }}
+              />
               <ProjectDialog
                 open={projectDialogOpen}
                 onOpenChange={setProjectDialogOpen}

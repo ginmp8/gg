@@ -54,6 +54,7 @@ import { createGitHubAdapter } from "@gita/github-adapter";
 
 import { enqueueProjectRefresh, enqueueRepositoryRefresh } from "./refresh";
 import { enqueueAnnualProjectIndex, syncAnnualGitHubCollaboration } from "./annual";
+import { discoverGitHubRepositories } from "./github-discovery";
 
 const idParamsSchema = z.object({
   projectId: z.string().min(1).optional(),
@@ -121,6 +122,55 @@ export function registerRoutes(server: FastifyInstance, database: GitaDatabase):
 
   // The annual report is a local SQLite read. It never refreshes Git or
   // contacts GitHub as a side effect of opening the dashboard.
+  // Discovery is a user-initiated POST, not a background dashboard read.
+  server.post("/api/github/discover", async (request, reply) => {
+    const body = z.object({ limit: z.number().int().min(1).max(5000).default(5000) }).parse(request.body ?? {});
+    if (!isGitHubMetadataAllowed()) {
+      return reply.status(403).send({
+        error: "network_disabled",
+        message: "Set GITA_ALLOW_GITHUB_METADATA=1 to enable explicit GitHub CLI discovery."
+      });
+    }
+    try {
+      return { items: await discoverGitHubRepositories(body.limit) };
+    } catch {
+      return reply.status(502).send({
+        error: "discovery_failed",
+        message: "GitHub CLI repository discovery failed. Check gh auth status and connectivity."
+      });
+    }
+  });
+
+  // Import only repository records; clones require a separate explicit Refresh.
+  // No user-provided path or arbitrary remote URL is accepted by this batch API.
+  server.post("/api/projects/:projectId/repositories/bulk", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    const project = await getProject(database, requireId(projectId));
+    if (!project) return reply.status(404).send({ error: "not_found" });
+    const input = z.object({
+      repositories: z.array(z.string().regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/))
+        .min(1).max(25)
+    }).parse(request.body);
+    const names = [...new Set(input.repositories.map((name) => name.toLowerCase()))];
+    const already = new Set((await listRepositories(database, project.id)).map((repo) =>
+      repo.url.replace(/\.git$/i, "").toLowerCase()
+    ));
+    const imported = [];
+    const skipped: string[] = [];
+    for (const name of names) {
+      const resolved = resolveRepositoryInput(name);
+      const key = resolved.fetchUrl.replace(/\.git$/i, "").toLowerCase();
+      if (already.has(key)) {
+        skipped.push(name);
+        continue;
+      }
+      const created = await createRepositoryRecord(database, project.id, resolved);
+      imported.push(created);
+      already.add(key);
+    }
+    return reply.status(201).send({ items: imported, skipped });
+  });
+
   server.get("/api/projects/:projectId/annual", async (request, reply) => {
     const { projectId } = idParamsSchema.parse(request.params);
     const query = z.object({

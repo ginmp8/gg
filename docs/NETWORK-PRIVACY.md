@@ -64,6 +64,20 @@ rows, after exact-name confirmation. It does not delete user source
 directories. See [annual analytics](ANNUAL-ANALYTICS.md) for data retention
 and methodology.
 
+## Explicit GitHub repository discovery
+
+The `GitHub import` picker uses `gh api --paginate` to list only authorized
+repository **metadata** (name, clone URL, visibility, archive status,
+last push, and default branch) after the user presses **Discover accessible
+repositories (network)**. The feature requires `GITA_ALLOW_GITHUB_METADATA=1`
+and is disabled by `GITA_OFFLINE=1`.
+
+Registering selected entries (maximum 25) saves local repository metadata
+without cloning, fetching or modifying any remote. A separate **Refresh**
+action explicitly starts the network Git operation. Private HTTPS sources
+require an existing Git credential helper; `gh auth setup-git` may configure
+one. No tokens are saved to Gita's project database by discovery.
+
 ## Trust boundaries and cached mirrors
 
 A remote refresh only permits HTTPS or SSH Git transports (plus the
