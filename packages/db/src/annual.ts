@@ -249,7 +249,10 @@ export function getAnnualReport(
   const developerDates = new Map<string, Set<string>>();
   const developerRepos = new Map<string, Set<string>>();
   const months = new Map<string, AnnualMonthly>();
-  let allPrComplete = repos.some((repo) => repo.provider === "github");
+  // A local repository without collaboration data cannot block a complete
+  // GitHub snapshot. Conversely, an explicitly incomplete snapshot anywhere
+  // in the selection must never be reported as complete.
+  let allPrComplete = true;
 
   for (const repo of repos) {
     const states = stateQuery.all(repo.id) as StateRow[];
@@ -263,7 +266,9 @@ export function getAnnualReport(
     const complete = Boolean(state &&
       state.analysis_version === VERSION && indexedCount === state.eligible_commits);
     const prState = prQuery.get(repo.id) as { fetchedAt: string; complete: number } | undefined;
-    if (repo.provider === "github" && (!prState || prState.complete !== 1)) allPrComplete = false;
+    if ((repo.provider === "github" && !prState) || (prState && prState.complete !== 1)) {
+      allPrComplete = false;
+    }
     coverage.push({
       repoId: repo.id, repositoryName: repo.name,
       ref: selectedRef, head: state?.head_sha ?? null,
@@ -329,8 +334,8 @@ export function getAnnualReport(
     developer.retainedChurnRate = safePercent(developer.adjustedChurn, developer.grossChurn);
     developer.testTouchedRate = safePercent(developer.testTouchedCommits, developer.commits);
 
-    if (developer.githubLogin && allPrComplete) {
-      const matching = (coverage.filter((item) => item.prCoverageComplete)).map((item) => item.repoId);
+    const matching = coverage.filter((item) => item.prCoverageComplete).map((item) => item.repoId);
+    if (developer.githubLogin && allPrComplete && matching.length > 0) {
       let merged = 0, reviewed = 0, approved = 0;
       const login = developer.githubLogin.toLowerCase();
       for (const repoId of matching) {
