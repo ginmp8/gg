@@ -1,11 +1,11 @@
 "use client";
 
-import type { AnnualMonthly } from "@gg/core";
+import type { AnnualMonthly, Repository } from "@gg/core";
 import { tagsForTarget } from "@gg/core";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowLeftRight, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { getAnnualReport, getProjectTags } from "@/lib/api";
+import { getAnnualReport, getProjectTags, indexAnnualProject } from "@/lib/api";
 import { COMPARISON_METRIC_GROUPS, formatComparisonValue, type CompareRow } from "@/lib/contributor-comparison-metrics";
 import { downloadLocalReport } from "@/lib/annual-export";
 import {
@@ -19,8 +19,14 @@ function textNumber(value: number | null | undefined, fraction = 0): string {
 }
 
 export function ContributorSideBySide({
-  projectId, repositoryId
-}: { projectId: string; repositoryId: string }) {
+  projectId, repositoryId, repositories, onRepositoryChange, onRunStarted
+}: {
+  projectId: string;
+  repositoryId: string;
+  repositories: Repository[];
+  onRepositoryChange: (repositoryId: string) => void;
+  onRunStarted: (runId: string) => void;
+}) {
   // Radix tabs may unmount inactive panels. Keep each repository's last selections
   // and analysis year in browser storage, with distinct selections for each year.
   const context = projectId + "\u0000" + repositoryId;
@@ -57,7 +63,15 @@ export function ContributorSideBySide({
     queryKey: ["project-tags", projectId],
     queryFn: () => getProjectTags(projectId)
   });
+  const indexMutation = useMutation({
+    mutationFn: () => indexAnnualProject(projectId),
+    onSuccess(run) {
+      onRunStarted(run.id);
+    }
+  });
   const data = annual.data;
+  const incompleteRepositories = data?.coverage.filter(item => !item.complete) ?? [];
+  const indexedRepositories = data?.coverage.filter(item => item.complete).length ?? 0;
   const scoreByEmail = useMemo(() =>
     new Map((data?.evidenceScores.contributors ?? []).map(row => [row.email, row])), [data]
   );
@@ -137,19 +151,57 @@ export function ContributorSideBySide({
             Tags filter available people without changing score-calculation cohorts.
           </p>
         </div>
-        <label className="flex items-center gap-2 text-sm">Analysis year
-          <input aria-label="Comparison year" type="number" min={1970} max={2100}
-            className="h-9 w-24 rounded border border-border bg-background px-2 tabular-nums"
-            value={year} onChange={event => setPreferences(p => ({ ...p, year: Number(event.target.value) }))} />
-        </label>
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="grid gap-1 text-xs">Repository scope
+            <select aria-label="Comparison repository scope" value={repositoryId}
+              onChange={event => onRepositoryChange(event.target.value)}
+              className="h-9 min-w-48 max-w-full rounded border border-border bg-background px-2 text-sm">
+              <option value="all">All repositories ({repositories.length})</option>
+              {repositories.map(repo => (
+                <option key={repo.id} value={repo.id}>{repo.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-xs">Analysis year
+            <input aria-label="Comparison year" type="number" min={1970} max={2100}
+              className="h-9 w-24 rounded border border-border bg-background px-2 text-sm tabular-nums"
+              value={year} onChange={event => setPreferences(p => ({ ...p, year: Number(event.target.value) }))} />
+          </label>
+        </div>
       </div>
       {!validYear && <p role="alert" className="text-sm text-danger">Choose a valid year.</p>}
       {annual.isError && <p role="alert" className="text-sm text-danger">{annual.error.message}</p>}
       {tags.isError && <p role="alert" className="text-sm text-danger">{tags.error.message}</p>}
       {annual.isLoading && <p role="status" className="text-sm text-muted-foreground">Loading local annual metrics…</p>}
-      {data && !data.complete && <p role="status" className="rounded border border-warning/60 p-3 text-sm text-warning">
-        Annual history is not fully indexed. Scores are unavailable until indexing is complete.
+      {indexMutation.isError && <p role="alert" className="text-sm text-danger">{indexMutation.error.message}</p>}
+      {indexMutation.isSuccess && <p role="status" className="text-sm text-muted-foreground">
+        Local indexing has started. Progress appears in the dashboard header.
       </p>}
+      {data && <p role="status" className="text-sm text-muted-foreground">
+        {data.contributors.length} contributors with commits in {year} across {data.coverage.length} selected
+        {data.coverage.length === 1 ? " repository" : " repositories"}.
+        {" "}{indexedRepositories}/{data.coverage.length} repository histories fully indexed.
+      </p>}
+      {data && incompleteRepositories.length > 0 && (
+        <div role="status" className="grid gap-3 rounded border border-warning/60 p-3 text-sm">
+          <p>
+            Contributor results are incomplete. Missing or incomplete annual history:
+            {" "}{incompleteRepositories.map(item => item.repositoryName).join(", ")}.
+            Other repositories may already have contributors available, but missing history
+            is not counted as zero.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="button" disabled={indexMutation.isPending}
+              onClick={() => indexMutation.mutate()}
+              className="rounded border border-border bg-panel px-3 py-2 text-sm hover:bg-muted disabled:opacity-50">
+              {indexMutation.isPending ? "Starting indexing…" : "Index local history"}
+            </button>
+            <span className="text-xs text-muted-foreground">
+              Uses cached Git mirrors only; refresh the project first if a mirror is missing.
+            </span>
+          </div>
+        </div>
+      )}
       <div className="grid gap-3 rounded-md border border-border bg-panel p-4 lg:grid-cols-[200px_minmax(0,1fr)_auto]">
         <label className="grid gap-1 text-xs">Filter by custom tag
           <select aria-label="Filter contributors by tag" value={tagId}
