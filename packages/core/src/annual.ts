@@ -1,4 +1,6 @@
-/** Read-only evidence, not a numeric score of individual productivity. */
+import type { IceScoreReport } from "./ice-score";
+
+/** Read-only annual evidence, with experimental cohort-relative score proxies. */
 export type AnnualChangeCategory = "source" | "test" | "docs" | "generated";
 
 export interface AnnualChangeRow {
@@ -102,6 +104,7 @@ export interface AnnualReport {
   totals: AnnualTotals;
   contributors: AnnualContributor[];
   monthly: AnnualMonthly[];
+  evidenceScores: IceScoreReport;
 }
 
 export interface AnnualIndexResult {

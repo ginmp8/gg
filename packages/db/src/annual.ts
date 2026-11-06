@@ -4,6 +4,7 @@ import type {
 } from "@gita/core";
 
 import type { GitaDatabase } from "./client";
+import { getAnnualEvidence } from "./ice";
 
 const VERSION = 1;
 
@@ -359,7 +360,7 @@ export function getAnnualReport(
     }
   }
 
-  return {
+  const report: Omit<AnnualReport, "evidenceScores"> = {
     projectId, year,
     complete: coverage.length > 0 && coverage.every((entry) => entry.complete),
     coverage, totals,
@@ -368,4 +369,5 @@ export function getAnnualReport(
     monthly: [...months.values()].sort((left, right) =>
       left.month.localeCompare(right.month) || left.email.localeCompare(right.email))
   };
+  return { ...report, evidenceScores: getAnnualEvidence(database, report) };
 }
