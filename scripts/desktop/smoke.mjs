@@ -9,8 +9,17 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { sidecarFileName, targetTriple } from "./triple.mjs";
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const apiEntry = path.join(root, "apps/desktop/src-tauri/api-dist/server.mjs");
+// Exercise the same copied Node executable shipped by Tauri, not the CI
+// runner's system Node. This catches missing or unusable sidecar binaries.
+const nodeSidecar = path.join(
+  root,
+  "apps/desktop/src-tauri/binaries",
+  sidecarFileName(process.env.TAURI_TARGET_TRIPLE ?? targetTriple())
+);
 const token = "a".repeat(64);
 const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "gg-sidecar-smoke-"));
 
@@ -23,7 +32,7 @@ async function reservePort() {
 }
 
 const port = await reservePort();
-const child = spawn(process.execPath, [apiEntry], {
+const child = spawn(nodeSidecar, [apiEntry], {
   env: {
     ...process.env,
     GG_API_PORT: String(port),
