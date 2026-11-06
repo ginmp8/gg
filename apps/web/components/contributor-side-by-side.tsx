@@ -1,20 +1,18 @@
 "use client";
 
-import type { AnnualContributor, IceContributorScore } from "@gita/core";
+import type { AnnualMonthly, AnnualContributor, IceContributorScore } from "@gita/core";
 import { tagsForTarget } from "@gita/core";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeftRight, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import { getAnnualReport, getProjectTags } from "@/lib/api";
+import { COMPARISON_METRIC_GROUPS, formatComparisonValue, type CompareRow } from "@/lib/contributor-comparison-metrics";
+import { downloadLocalReport } from "@/lib/annual-export";
 
 function textNumber(value: number | null | undefined, fraction = 0): string {
   if (value === null || value === undefined) return "N/A";
   return value.toLocaleString("en-US", { maximumFractionDigits: fraction });
 }
-function pct(value: number | null): string {
-  return value === null ? "N/A" : value.toFixed(1) + "%";
-}
-type ScoreRow = { person: AnnualContributor; evidence: IceContributorScore | undefined };
 
 export function ContributorSideBySide({
   projectId, repositoryId
@@ -50,10 +48,11 @@ export function ContributorSideBySide({
     !tagId || (tags.data &&
       tagsForTarget(tags.data, "contributor", person.primaryEmail).includes(tagId))
   ).map(person => person.primaryEmail));
-  const chosen: ScoreRow[] = (data?.contributors ?? [])
+  const chosen: CompareRow[] = (data?.contributors ?? [])
     .filter(person => selected.includes(person.primaryEmail) && selectable.has(person.primaryEmail))
     .sort((a,b) => selected.indexOf(a.primaryEmail) - selected.indexOf(b.primaryEmail))
-    .map(person => ({ person, evidence: scoreByEmail.get(person.primaryEmail) }));
+    .map(person => ({ person, evidence: scoreByEmail.get(person.primaryEmail),
+      monthly: (data?.monthly ?? []).filter(month => month.email === person.primaryEmail) }));
   const max = 4;
 
   function choose(email: string) {
@@ -62,23 +61,26 @@ export function ContributorSideBySide({
       : previous.length < max ? [...previous, email] : previous);
   }
 
-  const rows: Array<{ label: string; value: (item: ScoreRow) => number | null; format?: "pct" | "fixed" }> = [
-    { label: "Effective contribution · ICE-Git/1", value: item => item.evidence?.effectiveContributionScore ?? null, format: "fixed" },
-    { label: "Productivity proxy · Gita-Throughput/1", value: item => item.evidence?.productivityProxyScore ?? null, format: "fixed" },
-    { label: "GitHub-enhanced contribution", value: item => item.evidence?.combinedContributionScore ?? null, format: "fixed" },
-    { label: "Material commits", value: item => item.evidence?.materialCommits ?? null },
-    { label: "Bounded technical diff units", value: item => item.evidence?.boundedDiffCredit ?? null, format: "fixed" },
-    { label: "Active months", value: item => item.evidence?.activeMonths ?? null },
-    { label: "Integrated commits", value: item => item.person.commits },
-    { label: "Substantive commits", value: item => item.person.substantiveCommits },
-    { label: "Substantive commit rate", value: item => item.person.substantiveRate, format: "pct" },
-    { label: "Reviewable source/test churn", value: item => item.person.reviewableChurn },
-    { label: "Test touched commits", value: item => item.person.testTouchedCommits },
-    { label: "Active days", value: item => item.person.activeDays },
-    { label: "Merged pull requests", value: item => item.person.mergedPullRequests },
-    { label: "Reviewed pull requests", value: item => item.person.reviewedPullRequests },
-    { label: "Approved pull requests", value: item => item.person.approvedPullRequests }
+  const [monthlyMetric, setMonthlyMetric] = useState<keyof AnnualMonthly>("commits");
+  const months = Array.from({ length: 12 }, (_, i) => String(year) + "-" + String(i + 1).padStart(2, "0"));
+  const monthlyMetricLabels: Array<{ value: keyof AnnualMonthly; label: string }> = [
+    { value: "commits", label: "Commits" },
+    { value: "adjustedChurn", label: "Adjusted churn" },
+    { value: "reviewableChurn", label: "Reviewable churn" },
+    { value: "testTouchedCommits", label: "Test-touched commits" }
   ];
+  function exportSelected() {
+    if (!data || chosen.length < 2) return;
+    downloadLocalReport("gita-comparison-" + year + ".json", "application/json;charset=utf-8",
+      JSON.stringify({
+        methodology: data.evidenceScores.methodology,
+        productivityMethodology: data.evidenceScores.productivityMethodology,
+        scoreStatus: data.evidenceScores.status,
+        year, projectId, repositoryId, complete: data.complete,
+        cohortReferences: data.evidenceScores.references,
+        contributors: chosen
+      }, null, 2));
+  }
 
   return (
     <section aria-label="Side-by-side contributor comparison" className="grid gap-4">
@@ -192,39 +194,116 @@ export function ContributorSideBySide({
               );
             })}
           </div>
-          <div className="overflow-x-auto rounded-md border border-border bg-panel">
-            <table className="w-full min-w-[680px] border-collapse text-left text-xs">
-              <thead>
-                <tr className="border-b border-border bg-muted">
-                  <th scope="col" className="min-w-44 px-3 py-3 font-medium">Evidence metric</th>
-                  {chosen.map(({person}) => (
-                    <th scope="col" key={person.primaryEmail} className="min-w-36 px-3 py-3 text-right font-medium">
-                      <span className="block truncate" title={person.displayName}>{person.displayName}</span>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold">Complete metric breakdown</h3>
+              <p className="text-xs text-muted-foreground">
+                Every available annual contributor field, score component and monthly evidence series.
+              </p>
+            </div>
+            <button type="button" onClick={exportSelected}
+              className="rounded border border-border bg-panel px-3 py-2 text-sm hover:bg-muted">
+              Export selected comparison (JSON)
+            </button>
+          </div>
+          <div className="grid gap-3">
+            {COMPARISON_METRIC_GROUPS.map((group, i) => (
+              <details key={group.title} open={i === 0 ? true : undefined}
+                className="overflow-hidden rounded-md border border-border bg-panel">
+                <summary className="cursor-pointer select-none px-4 py-3 text-sm font-semibold hover:bg-muted">
+                  {group.title} <span className="ml-2 font-normal text-muted-foreground">
+                    {group.metrics.length} measures
+                  </span>
+                </summary>
+                <div className="overflow-x-auto border-t border-border">
+                  <table className="w-full min-w-[680px] border-collapse text-left text-xs">
+                    <thead>
+                      <tr className="border-b border-border bg-muted">
+                        <th scope="col" className="min-w-48 px-3 py-3 font-medium">Measure</th>
+                        {chosen.map(item => (
+                          <th scope="col" key={item.person.primaryEmail}
+                            className="min-w-36 px-3 py-3 text-right font-medium">
+                            <span className="block truncate" title={item.person.displayName}>
+                              {item.person.displayName}
+                            </span>
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.metrics.map(metric => {
+                        const values = chosen.map(item => metric.value(item));
+                        const numeric = values.filter((n): n is number =>
+                          typeof n === "number" && Number.isFinite(n));
+                        const maxScore = group.title === "Contribution and productivity scores" &&
+                          numeric.length > 1 ? Math.max(...numeric) : null;
+                        return (
+                          <tr key={metric.key} className="border-b border-border/60 last:border-b-0">
+                            <th scope="row" className="px-3 py-2.5 align-top font-medium">
+                              {metric.label}
+                              <span className="mt-0.5 block text-[11px] font-normal text-muted-foreground">
+                                {metric.explanation}
+                              </span>
+                            </th>
+                            {values.map((value, index) => (
+                              <td key={chosen[index]!.person.primaryEmail}
+                                className={"px-3 py-2.5 text-right tabular-nums " +
+                                  (maxScore !== null && value === maxScore &&
+                                    numeric.some(n => n < maxScore)
+                                    ? "font-semibold text-accent" : "")}>
+                                {formatComparisonValue(value, metric.format)}
+                              </td>
+                            ))}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            ))}
+          </div>
+          <section className="grid gap-3 rounded-md border border-border bg-panel p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold">Monthly activity comparison</h3>
+              <label className="flex items-center gap-2 text-xs">
+                Metric
+                <select aria-label="Monthly comparison metric"
+                  value={monthlyMetric} onChange={event =>
+                    setMonthlyMetric(event.target.value as keyof AnnualMonthly)}
+                  className="h-9 rounded border border-border bg-background px-2 text-sm">
+                  {monthlyMetricLabels.map(metric => (
+                    <option key={metric.value} value={metric.value}>{metric.label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[680px] text-left text-xs">
+                <thead><tr className="border-b border-border bg-muted">
+                  <th className="px-3 py-2">Month</th>
+                  {chosen.map(item => (
+                    <th key={item.person.primaryEmail} className="px-3 py-2 text-right">
+                      {item.person.displayName}
                     </th>
                   ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map(metric => {
-                  const values = chosen.map(metric.value);
-                  const valid = values.filter((value): value is number => value !== null && Number.isFinite(value));
-                  const highest = valid.length >= 2 ? Math.max(...valid) : null;
-                  return (
-                    <tr key={metric.label} className="border-b border-border/70 last:border-b-0">
-                      <th scope="row" className="px-3 py-3 font-medium text-muted-foreground">{metric.label}</th>
-                      {values.map((value, index) => (
-                        <td key={chosen[index]!.person.primaryEmail} className={"px-3 py-3 text-right tabular-nums " +
-                          (highest !== null && value === highest && valid.some(other => other < highest)
-                            ? "font-semibold text-accent" : "")}>
-                          {metric.format === "pct" ? pct(value) : textNumber(value,metric.format === "fixed" ? 1 : 0)}
+                </tr></thead>
+                <tbody>
+                  {months.map(month => (
+                    <tr key={month} className="border-b border-border/60">
+                      <th scope="row" className="px-3 py-2 font-medium">{month}</th>
+                      {chosen.map(item => (
+                        <td key={item.person.primaryEmail} className="px-3 py-2 text-right tabular-nums">
+                          {textNumber(item.monthly.find(row => row.month === month)?.[monthlyMetric] as number | undefined)}
                         </td>
                       ))}
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
           <p className="text-xs leading-relaxed text-muted-foreground">
             Highlighting indicates the highest value of each measure, not the best employee.
             ICE-Git/1 and Gita-Throughput/1 are experimental, cohort-relative Git evidence proxies.
