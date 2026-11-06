@@ -104,7 +104,7 @@ export function ContributorSideBySide({
   const someMatching = people.some(person => selectedEmails.has(person.primaryEmail));
   useEffect(() => {
     if (selectAllRef.current) selectAllRef.current.indeterminate = someMatching && !allMatching;
-  }, [allMatching, someMatching]);
+  }, [allMatching, someMatching, viewMode]);
   function choose(email: string): void {
     setSelected(previous => previous.includes(email)
       ? previous.filter(item => item !== email) : [...previous, email]);
