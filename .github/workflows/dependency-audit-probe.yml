@@ -1,0 +1,39 @@
+# Temporary read-only probe for preparing a reviewed dependency update.
+# This workflow does not commit, push, publish or consume repository secrets.
+name: Dependency audit remediation probe
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  propose-lockfile:
+    if: github.head_ref == 'development'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - name: Set up Node.js 24
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Compute compatible lockfile-only remediation without lifecycle scripts
+        shell: bash
+        run: |
+          set +e
+          npm audit --json > audit-before.json
+          node -e 'const f=require("fs");const a=JSON.parse(f.readFileSync("audit-before.json","utf8"));console.log("GG_AUDIT_BEFORE="+JSON.stringify({total:a.metadata?.vulnerabilities,packages:Object.entries(a.vulnerabilities||{}).map(([name,v])=>({name,severity:v.severity,range:v.range,fixAvailable:v.fixAvailable,via:v.via.map(x=>typeof x==="string"?x:{name:x.name,title:x.title,range:x.range,url:x.url})}))}))'
+          npm audit fix --package-lock-only --ignore-scripts --audit-level=moderate > audit-fix-output.txt 2>&1
+          echo "GG_AUDIT_FIX_EXIT=$?"
+          tail -n 30 audit-fix-output.txt
+          npm audit --json > audit-after.json
+          node -e 'const f=require("fs");const a=JSON.parse(f.readFileSync("audit-after.json","utf8"));console.log("GG_AUDIT_AFTER="+JSON.stringify({total:a.metadata?.vulnerabilities,packages:Object.entries(a.vulnerabilities||{}).map(([name,v])=>({name,severity:v.severity,range:v.range,fixAvailable:v.fixAvailable,via:v.via.map(x=>typeof x==="string"?x:{name:x.name,title:x.title,range:x.range,url:x.url})}))}))'
+          echo "GG_LOCKFILE_START"
+          cat package-lock.json
+          echo "GG_LOCKFILE_END"
+          echo "GG_PACKAGE_JSON_DIFF_START"
+          git diff -- package.json
+          echo "GG_PACKAGE_JSON_DIFF_END"
