@@ -1,10 +1,27 @@
 # Contributor comparison (GG Analytics 0.2.0)
 
 **Compare** is immediately to the right of **Contributors** in the menu.
-Choose a project/repository and analysis year, then search for contributors.
-The selection is saved per project, repository and year, so changing tabs or
-restarting GG restores the previous list. The tag and search filters are
-restored with the selected year.
+Choose a project and analysis year. Use **Repository scope** in the Compare tab
+(or the synchronized dashboard repository selector) to choose **All repositories**
+or a single repository. All repositories aggregates every indexed repository
+belonging to the selected project, deduplicating contributors by canonical
+email; a single repository restricts the candidates, metrics, scores and
+export to that repository. The selection is saved per project, repository
+and year, so changing tabs or restarting GG restores the previous list.
+The tag and search filters are restored with the selected year.
+
+The comparison displays both the number of repository histories included
+in the selected scope and the count fully indexed. If a repository was
+added but not indexed, the UI names it explicitly instead of silently
+presenting the first repository's contributors as the full workspace.
+Use **Index local history** to index existing cached mirrors (without
+contacting remotes). If a repository has no mirror, use the dashboard's
+explicit project refresh first. The chosen analysis year still limits
+contributors to commits in that year: a fully indexed repository with
+no commits that year does not add any contributors.
+
+Adding a repository invalidates cached annual reports. Once a refresh
+or reindex run completes, the dashboard refetches the comparison.
 
 Use **Select all matching** to include everyone visible after applying the
 optional tag and text filters, or toggle it again to remove only that visible
