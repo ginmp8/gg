@@ -568,7 +568,8 @@ export function Dashboard() {
     : pullRequestsQuery.data?.providerState ?? null;
   const currentRun = refreshRunQuery.data ?? null;
   const syncBusy = syncMutation.isPending ||
-    currentRun?.status === "running" || currentRun?.status === "queued";
+    (Boolean(activeRunId) && (refreshRunQuery.isPending ||
+      currentRun?.status === "running" || currentRun?.status === "queued"));
   const repositoryBranchSettings = repositories.map((repo, index) =>
     toRepositoryBranchSetting(repo, repositoryBranchesQueries[index]?.data?.items ?? [])
   );
