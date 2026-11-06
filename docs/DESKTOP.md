@@ -92,7 +92,7 @@ required for repository analysis.
   Existing browser `.gita/gita.sqlite` is **not** automatically moved.
 - Remote repositories remain Git bare mirrors. Local-path and SSH/HTTPS
   sources work as before.
-- No PostgreSQL migration or analytics schema change is introduced.
+- Version 0.2.0 adds a non-destructive local SQLite migration for custom tags. Back up local app data before upgrading.
 - The native sidecar uses a random port instead of the default `4443`.
 - The default web API still binds to `127.0.0.1:4443` when run without
   desktop-specific variables.

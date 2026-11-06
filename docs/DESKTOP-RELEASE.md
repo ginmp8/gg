@@ -1,15 +1,30 @@
-# Gita Desktop 0.1.0
+# Gita Desktop 0.2.0 — release candidate
 
-Initial Tauri 2 desktop packaging for Gita's existing analytics dashboard.
+**Status:** candidate on development only. No v0.2.0 tag, installer publication or GitHub Release has been created.
 
-- Windows x64 NSIS executable, Linux x64 Debian package, macOS Apple Silicon DMG.
-- Bundled Node.js 24 runtime, Fastify API and native SQLite driver.
-- Existing Git commit/contributor analytics and dashboard preserved.
-- Desktop API secured by per-process bearer token, loopback binding,
-  restricted Host/CORS policy and native-only sidecar launch.
-- No npm publication, automatic updater, or telemetry.
+## New capabilities
 
-Git must be installed to analyze repositories. GitHub CLI is optional.
-Unsigned development builds may trigger platform security warnings.
+- Full-history annual contribution analytics, incremental local SQLite indexing and ICE-Git/1 contribution evidence.
+- Experimental Gita-Throughput/1 technical productivity proxy; traceable per-developer diff and commit samples.
+- Compare two to four selected contributors side by side with user-created tag filtering.
+- Project-wide branch and PR inventories with repository source columns and pagination.
+- User-defined custom tags and optional groups, assignable to contributors, repos, branches and pull requests.
+- Dedicated Settings tab for project management, refresh, saved branch views, labels and appearance.
+- Light/dark/system theme, safe deletion of app-owned project caches and local-first GitHub discovery.
 
-See [Desktop setup and limitations](docs/DESKTOP.md).
+## Packaging
+
+- Windows x64 NSIS installer, Linux x64 Debian package, macOS Apple Silicon DMG through the existing Tauri 2 workflow.
+- Bundled Node.js 24, Fastify API and platform-native SQLite binding.
+- Loopback-only desktop API with per-process bearer token. No automatic updater, telemetry or npm publication.
+- Git remains mandatory; GitHub CLI is optional for GitHub metadata.
+
+## Upgrade and validation
+
+Version 0.2.0 adds additive project_tags and project_tag_assignments SQLite tables.
+Back up the Gita data directory before upgrading. No analyzed Git source repository is modified.
+Scores are experimental technical signals rather than objective measures of productivity.
+Unsigned installers can trigger platform warnings. Graphical testing and signing/notarization
+should precede broad distribution.
+
+See [desktop setup](DESKTOP.md) and [version 0.2.0 release notes](../releases/0.2.0.md).

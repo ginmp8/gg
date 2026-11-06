@@ -18,6 +18,10 @@ Gita turns Git history into a clear engineering analytics dashboard. Group
 repositories into projects, refresh their data on demand, and explore the
 people and files behind every change—all from a local web application.
 
+**Version 0.2.0 candidate:** prepared on the development branch. No tag or GitHub Release has been published.
+See the [0.2.0 release notes](releases/0.2.0.md), [documentation index](docs/README.md)
+and [feature catalog](docs/features/README.md).
+
 ## One dashboard for the whole project
 
 Gita is not limited to a single repository. You can manage multiple independent
@@ -53,11 +57,14 @@ technologies and parts of a project that absorb the most work.
 
 - Project-level analytics across multiple repositories
 - Commits, insertions, deletions, net line change, and churn over time
-- Contributor leaderboards, activity trends, and focus areas
+- Contributor leaderboards, activity trends, focused comparisons of 2–4 selected developers, and custom tag filters
 - Repository comparisons, branch activity, hot files, and file-type insights
 - Read-only three-dot branch comparisons (ahead/behind and changed files) from
   cached Git mirrors, with a 500-file display limit and truncation notice
 - Reusable branch views with per-repository folder filters
+- Project-wide Branches and Pull requests tables with repository names
+- Free-form custom tags and optional groups for contributors, repositories, branches and pull requests
+- Dedicated Settings tab for workspace management, appearance and labels
 - GitHub pull requests and branch metadata through the optional `gh` CLI
 - Composable filters for repository, contributor, branch, folder, date, and
   metric
@@ -101,7 +108,7 @@ do not demonstrate delivery value or engineering quality. See the detailed
 
 ## Appearance and project lifecycle
 
-Select **Light**, **Dark**, or **System** in the dashboard header. The
+Select **Light**, **Dark**, or **System** in **Settings → Appearance**. The
 preference is stored locally in your browser and includes chart colors.
 
 A project's **Delete project and local data** control asks you to type the
