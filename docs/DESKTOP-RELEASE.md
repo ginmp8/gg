@@ -1,6 +1,6 @@
-# GG Desktop 0.2.0 — release candidate
+# GG Desktop 0.3.0 — proposed release
 
-**Status:** candidate on development only. No v0.2.0 tag, installer publication or GitHub Release has been created.
+**Status:** documentation proposal only. Package and desktop version metadata still declare 0.2.0. No v0.3.0 tag, installer publication, or GitHub Release is claimed.
 
 ## New capabilities
 
@@ -21,10 +21,14 @@
 
 ## Upgrade and validation
 
-Version 0.2.0 adds additive project_tags and project_tag_assignments SQLite tables.
+The consolidated candidate includes additive annual analytics and custom-tag
+SQLite tables; these features already existed in the unpublished 0.2.0 candidate.
 Back up the GG data directory before upgrading. No analyzed Git source repository is modified.
 Scores are experimental technical signals rather than objective measures of productivity.
 Unsigned installers can trigger platform warnings. Graphical testing and signing/notarization
 should precede broad distribution.
 
-See [desktop setup](DESKTOP.md) and [version 0.2.0 release notes](../releases/0.2.0.md).
+See [desktop setup](DESKTOP.md) and [proposed 0.3.0 release notes](../releases/0.3.0.md).
+
+Before publication, align every version manifest, run native packaging and
+GUI smoke tests, review the full dependency audit and approve the release.
