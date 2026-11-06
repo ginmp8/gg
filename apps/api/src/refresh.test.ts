@@ -101,6 +101,7 @@ describe("explicit project refresh network consent", () => {
         coverage: Array<{ repoId: string; complete: boolean }>;
         contributors: Array<{ primaryEmail: string; commits: number; repositories: number }>;
         totals: { commits: number };
+        evidenceScores: { status: string };
       };
       const projectRepos = await listRepositories(database, project.id);
       expect(all.complete).toBe(true);
