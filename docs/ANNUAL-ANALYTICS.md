@@ -5,11 +5,14 @@
 This module ports the annual Git analytics design and measurement principles
 from [ginmp8/git-insights-dashboard PR #1](https://github.com/ginmp8/git-insights-dashboard/pull/1)
 into Gita's TypeScript/Fastify/SQLite architecture. It does not embed Python
-or Streamlit, does not call a hosted analytics service, and does not score
-individual developer productivity.
+or Streamlit, does not call a hosted analytics service, and provides experimental relative technical evidence scores. Neither score
+establishes objective human productivity.
 
 The **Annual contribution** tab is the default project view. The existing
 Overview, Contributors, Files, Branches and Pull requests tabs remain available.
+
+See [ICE-Git/1 and Gita-Throughput/1](ICE-GIT.md) for formulas, evidence
+and limitations.
 
 ## Scope and counting
 
@@ -110,6 +113,13 @@ in progress block deletion. Unsafe, changed, or shared mirror paths cause
 the operation to fail before database deletion. Cached mirrors are first
 quarantined so a failed DB deletion can be rolled back; a post-commit
 filesystem cleanup failure is explicitly reported.
+
+## Contribution and productivity evidence scores
+
+The annual dashboard now displays effective contribution (ICE-Git/1) and a
+separate productivity proxy (Gita-Throughput/1) from already cached per-SHA
+and per-file diffs. Both scores are cohort-relative, experimental, auditable
+and exported to CSV/JSON. The full annual metrics and other tabs remain.
 
 ## Validation and limits
 

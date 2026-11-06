@@ -1,18 +1,19 @@
 "use client";
 
-import type { AnnualIdentityLink } from "@gita/core";
+import type { AnnualContributor, AnnualIdentityLink } from "@gita/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { AnnualMonthlyChart } from "@/components/annual-monthly-chart";
+import { AnnualEvidencePanel } from "@/components/annual-evidence-panel";
 import {
   getAnnualIdentities, getAnnualReport, indexAnnualProject,
   saveAnnualIdentity, syncAnnualGitHub
 } from "@/lib/api";
 import { annualCsv, downloadLocalReport } from "@/lib/annual-export";
 
-type SortKey = "commits" | "adjustedChurn" | "substantiveCommits" | "reviewableChurn" | "testTouchedCommits";
+type SortKey = "contribution" | "productivity" | "commits" | "adjustedChurn" | "substantiveCommits" | "reviewableChurn" | "testTouchedCommits";
 
 function amount(value: number | null): string {
   return value === null ? "—" : value.toLocaleString("en-US");
@@ -45,7 +46,7 @@ export function AnnualAnalytics({
   const [yearText, setYearText] = useState(String(new Date().getFullYear()));
   const year = Number(yearText);
   const validYear = Number.isInteger(year) && year >= 1970 && year <= 2100;
-  const [sort, setSort] = useState<SortKey>("commits");
+  const [sort, setSort] = useState<SortKey>("contribution");
   const [focusEmail, setFocusEmail] = useState("");
   const [email, setEmail] = useState("");
   const [canonicalEmail, setCanonicalEmail] = useState("");
@@ -81,10 +82,18 @@ export function AnnualAnalytics({
   });
 
   const report = annualQuery.data;
-  const rows = useMemo(() =>
-    [...(report?.contributors ?? [])].sort((a, b) => b[sort] - a[sort] || a.displayName.localeCompare(b.displayName)),
-    [report, sort]
-  );
+  const scoreByEmail = useMemo(() => new Map(
+    (report?.evidenceScores.contributors ?? []).map((item) => [item.email, item])
+  ), [report]);
+  const rows = useMemo(() => {
+    const value = (item: AnnualContributor): number => {
+      if (sort === "contribution") return scoreByEmail.get(item.primaryEmail)?.effectiveContributionScore ?? -1;
+      if (sort === "productivity") return scoreByEmail.get(item.primaryEmail)?.productivityProxyScore ?? -1;
+      return item[sort];
+    };
+    return [...(report?.contributors ?? [])].sort((a, b) =>
+      value(b) - value(a) || a.displayName.localeCompare(b.displayName));
+  }, [report, sort, scoreByEmail]);
   const focus = report?.contributors.some((item) => item.primaryEmail === focusEmail)
     ? focusEmail : null;
   const coveredRepos = report?.coverage.filter((item) => item.complete).length ?? 0;
@@ -105,8 +114,8 @@ export function AnnualAnalytics({
           <h2 className="text-lg font-semibold">Annual engineering contribution</h2>
           <p className="max-w-3xl text-sm text-muted-foreground">
             Full reachable history for each repository&apos;s integration branch, locally
-            indexed by commit SHA. These are auditable activity and collaboration indicators,
-            not a score of developer productivity or code quality.
+            indexed by commit SHA. Auditable metrics and two experimental relative scores
+            for contribution evidence and technical throughput, not verified human productivity.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -160,6 +169,7 @@ export function AnnualAnalytics({
               Do not compare partial counts as full-year totals.
             </div>
           )}
+          <AnnualEvidencePanel report={report.evidenceScores} />
           <div className="grid grid-cols-2 gap-2 lg:grid-cols-6">
             {metric("Integrated commits", report.totals.commits)}
             {metric("Developers", report.contributors.length)}
@@ -183,6 +193,8 @@ export function AnnualAnalytics({
                 <select aria-label="Sort developer metrics" value={sort}
                   onChange={(event) => setSort(event.target.value as SortKey)}
                   className="h-9 rounded border border-border bg-background px-2 text-foreground">
+                  <option value="contribution">Effective contribution score</option>
+                  <option value="productivity">Productivity proxy</option>
                   <option value="commits">Integrated commits</option>
                   <option value="substantiveCommits">Substantive commits</option>
                   <option value="adjustedChurn">Adjusted churn</option>
@@ -192,14 +204,14 @@ export function AnnualAnalytics({
               </label>
             </div>
             <p className="text-xs text-muted-foreground">
-              Sorting is descriptive only. Churn excludes whitespace and detects renames;
-              differences in roles and work types are not controlled. A dash means unavailable PR data.
+              Scores are experimental cohort-relative signals, not proof of individual performance.
+              Churn excludes whitespace and detects renames. A dash means unavailable data.
             </p>
             <div className="overflow-x-auto">
               <table className="min-w-[1430px] w-full text-left text-xs">
                 <thead className="text-muted-foreground">
                   <tr className="border-b border-border">
-                    {["Developer", "Repos", "Commits", "Active days", "Substantive", "Cosmetic-only",
+                    {["Developer", "Contribution score", "Productivity proxy", "Repos", "Commits", "Active days", "Substantive", "Cosmetic-only",
                       "Substantive %", "Gross churn", "Adjusted churn", "Retained %", "Code/test churn",
                       "Tests churn", "Docs churn", "Generated churn", "Touched tests",
                       "Merged PRs", "Reviewed PRs", "Approved PRs"].map((label) =>
@@ -216,6 +228,8 @@ export function AnnualAnalytics({
                           {item.primaryEmail}
                         </div>
                       </td>
+                      <td className="px-2 py-2 font-semibold tabular-nums">{amount(scoreByEmail.get(item.primaryEmail)?.effectiveContributionScore ?? null)}</td>
+                      <td className="px-2 py-2 tabular-nums">{amount(scoreByEmail.get(item.primaryEmail)?.productivityProxyScore ?? null)}</td>
                       <td className="px-2 py-2 tabular-nums">{amount(item.repositories)}</td>
                       <td className="px-2 py-2 tabular-nums">{amount(item.commits)}</td>
                       <td className="px-2 py-2 tabular-nums">{amount(item.activeDays)}</td>

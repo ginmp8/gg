@@ -111,4 +111,45 @@ describe("full-year SQLite annual contribution index", () => {
       fs.rmSync(root, { recursive: true, force: true });
     }
   }, 30_000);
+
+  it("scores material authors and generated-only changes from persisted file diffs", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gita-evidence-"));
+    const original = path.join(root, "original");
+    fs.mkdirSync(original);
+    execFileSync("git", ["init", "--initial-branch=main", original], { stdio: "ignore" });
+    const database = openGitaDatabase(root);
+    try {
+      const project = await createProject(database, { name: "Evidence fixture" });
+      const repo = await createRepositoryRecord(database, project.id, {
+        name: "test", fetchUrl: original, localPath: original, provider: "local", githubOwnerRepo: null
+      });
+      for (const [author, name, value] of [
+        ["alpha", "a.py", "x = 1\n"], ["beta", "b.py", "x = 2\n"],
+        ["gamma", "c.py", "x = 3\n"], ["cosmetic", "package-lock.json", "{\"lockfileVersion\":3}\n"]
+      ]) {
+        fs.writeFileSync(path.join(original, name), value);
+        git(original, ["add", "-A"]);
+        git(original, ["-c", "user.name=" + author, "-c", "user.email=" + author + "@example.test",
+          "commit", "-m", "Add " + name]);
+      }
+      await ensureMirrorRepository({
+        fetchUrl: original, cachePath: repo.cachePath, reposRoot: database.paths.reposDir
+      });
+      storeRepositoryAnalysis(database, repo, await analyzeRepository(repo.cachePath));
+      expect((await indexAnnualRepository(database, repo)).newCommits).toBe(4);
+      const initial = getAnnualReport(database, project.id, 2026);
+      expect(initial.evidenceScores.status).toBe("ok");
+      const scores = new Map(initial.evidenceScores.contributors.map((row) => [row.email, row]));
+      expect(scores.get("alpha@example.test")?.effectiveContributionScore).toBeGreaterThan(0);
+      expect(scores.get("cosmetic@example.test")?.effectiveContributionScore).toBe(0);
+      expect(scores.get("cosmetic@example.test")?.productivityProxyScore).toBe(0);
+      expect(scores.get("alpha@example.test")?.fileEvidence.some((file) => file.path === "a.py")).toBe(true);
+      expect(scores.get("alpha@example.test")?.combinedContributionScore).toBeNull();
+      expect((await indexAnnualRepository(database, repo)).newCommits).toBe(0);
+      expect(getAnnualReport(database, project.id, 2026).evidenceScores).toEqual(initial.evidenceScores);
+    } finally {
+      database.sqlite.close();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  }, 30_000);
 });

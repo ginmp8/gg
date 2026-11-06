@@ -41,10 +41,20 @@ const FIELDS: Array<[string, keyof AnnualContributor]> = [
 ];
 
 export function annualCsv(report: AnnualReport): string {
-  const header = FIELDS.map(([label]) => csvCell(label)).join(",");
-  const rows = report.contributors.map((contributor) =>
-    FIELDS.map(([, key]) => csvCell(contributor[key])).join(",")
-  );
+  const scores = new Map(report.evidenceScores.contributors.map((row) => [row.email, row]));
+  const header = [...FIELDS.map(([label]) => csvCell(label)),
+    csvCell("Effective contribution score (ICE-Git/1)"),
+    csvCell("Productivity proxy (Gita-Throughput/1)"),
+    csvCell("GitHub-enhanced contribution score"),
+    csvCell("Evidence weight coverage (%)"),
+    csvCell("Material commits"), csvCell("Bounded diff credit")].join(",");
+  const rows = report.contributors.map((contributor) => {
+    const score = scores.get(contributor.primaryEmail);
+    return [...FIELDS.map(([, key]) => csvCell(contributor[key])),
+      csvCell(score?.effectiveContributionScore), csvCell(score?.productivityProxyScore),
+      csvCell(score?.combinedContributionScore), csvCell(score?.evidenceCoveragePercent),
+      csvCell(score?.materialCommits), csvCell(score?.boundedDiffCredit)].join(",");
+  });
   return [header, ...rows].join("\r\n") + "\r\n";
 }
 

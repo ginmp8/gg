@@ -68,6 +68,12 @@ directory.
 
 ## Engineering analytics — complete annual contribution
 
+The annual view includes **ICE-Git/1 effective contribution** and a separate
+**Gita-Throughput/1 technical productivity proxy**, both relative experimental
+0–100 indicators calculated from cached Git diff evidence (not objective
+measurements of human performance). See [methodology](docs/ICE-GIT.md).
+
+
 The **Annual contribution** tab is the first view in every Gita project.
 It incorporates the complete-history, incremental annual measurement approach
 from [Git Insights Dashboard 0.3.0](https://github.com/ginmp8/git-insights-dashboard/pull/1).
