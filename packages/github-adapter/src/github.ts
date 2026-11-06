@@ -113,7 +113,7 @@ async function checkStatus(runner: GhRunner): Promise<ProviderState> {
     return {
       available: false,
       reason: "network_disabled",
-      message: "GitHub metadata is disabled. Set GITA_ALLOW_GITHUB_METADATA=1 to enable it."
+      message: "GitHub metadata is disabled by GITA_OFFLINE=1 or GITA_ALLOW_GITHUB_METADATA=0."
     };
   }
 

@@ -5,7 +5,8 @@ import { createGitHubAdapter } from "./github";
 afterEach(() => vi.unstubAllEnvs());
 
 describe("github adapter degraded behavior", () => {
-  it("does not invoke gh or query PR metadata without explicit consent", async () => {
+  it("does not invoke gh or query PR metadata when explicitly offline", async () => {
+    vi.stubEnv("GITA_OFFLINE", "1");
     const runner = vi.fn(async () => {
       throw new Error("The GitHub CLI should not be executed while offline.");
     });
@@ -13,7 +14,7 @@ describe("github adapter degraded behavior", () => {
     const state = {
       available: false,
       reason: "network_disabled",
-      message: "GitHub metadata is disabled. Set GITA_ALLOW_GITHUB_METADATA=1 to enable it."
+      message: "GitHub metadata is disabled by GITA_OFFLINE=1 or GITA_ALLOW_GITHUB_METADATA=0."
     };
 
     await expect(adapter.getStatus()).resolves.toEqual(state);

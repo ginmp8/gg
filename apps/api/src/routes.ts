@@ -128,7 +128,7 @@ export function registerRoutes(server: FastifyInstance, database: GitaDatabase):
     if (!isGitHubMetadataAllowed()) {
       return reply.status(403).send({
         error: "network_disabled",
-        message: "Set GITA_ALLOW_GITHUB_METADATA=1 to enable explicit GitHub CLI discovery."
+        message: "GitHub metadata is disabled by GITA_OFFLINE=1 or GITA_ALLOW_GITHUB_METADATA=0."
       });
     }
     try {
@@ -223,7 +223,7 @@ export function registerRoutes(server: FastifyInstance, database: GitaDatabase):
     if (!isGitHubMetadataAllowed()) {
       return reply.status(403).send({
         error: "network_disabled",
-        message: "Set GITA_ALLOW_GITHUB_METADATA=1 to opt into read-only GitHub collaboration queries."
+        message: "GitHub metadata is disabled by GITA_OFFLINE=1 or GITA_ALLOW_GITHUB_METADATA=0."
       });
     }
     const body = z.object({ repositoryId: z.string().uuid().optional() }).parse(request.body ?? {});

@@ -285,7 +285,7 @@ export function AnnualAnalytics({
               <p className="text-sm text-muted-foreground">
                 Map Git author emails to a canonical email, and optionally map that person to a GitHub login.
                 PR and review data is fetched only when you click the button below and have enabled
-                GITA_ALLOW_GITHUB_METADATA=1. An unavailable snapshot is not zero.
+                GitHub metadata enabled (default, unless explicitly disabled). An unavailable snapshot is not zero.
               </p>
               <form className="grid gap-2 md:grid-cols-4" onSubmit={(event) => {
                 event.preventDefault();

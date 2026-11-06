@@ -86,7 +86,7 @@ export async function syncAnnualGitHubCollaboration(
   repo: Repository & { githubOwnerRepo: string | null }
 ): Promise<{ repoId: string; received: number; complete: boolean }> {
   if (!isGitHubMetadataAllowed()) {
-    throw new Error("Enable GITA_ALLOW_GITHUB_METADATA=1 to authorize optional GitHub collaboration queries.");
+    throw new Error("GitHub metadata is disabled by GITA_OFFLINE=1 or GITA_ALLOW_GITHUB_METADATA=0.");
   }
   const id = repo.githubOwnerRepo;
   if (!id || !/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(id)) {

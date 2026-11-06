@@ -12,10 +12,12 @@ describe("network egress controls", () => {
   it("requires explicit operation authorization and honors offline overrides", () => {
     expect(isRemoteGitAllowed()).toBe(false);
     expect(isRemoteGitAllowed(process.env, true)).toBe(true);
-    expect(isGitHubMetadataAllowed()).toBe(false);
+    expect(isGitHubMetadataAllowed({})).toBe(true);
     vi.stubEnv("GITA_ALLOW_REMOTE_GIT", "true");
     vi.stubEnv("GITA_ALLOW_GITHUB_METADATA", "yes");
     expect(isRemoteGitAllowed()).toBe(false);
+    expect(isGitHubMetadataAllowed()).toBe(true);
+    vi.stubEnv("GITA_ALLOW_GITHUB_METADATA", "0");
     expect(isGitHubMetadataAllowed()).toBe(false);
     vi.stubEnv("GITA_ALLOW_REMOTE_GIT", "1");
     vi.stubEnv("GITA_ALLOW_GITHUB_METADATA", "1");
@@ -30,9 +32,10 @@ describe("network egress controls", () => {
     expect(isRemoteGitAllowed(process.env, true)).toBe(false);
   });
 
-  it("does not start GitHub CLI without consent", async () => {
+  it("does not start GitHub CLI when explicitly disabled", async () => {
+    vi.stubEnv("GITA_ALLOW_GITHUB_METADATA", "0");
     await expect(runProcess("gh", ["auth", "status"])).rejects.toThrow(
-      /GITA_ALLOW_GITHUB_METADATA=1/
+      /GITA_ALLOW_GITHUB_METADATA=0/
     );
   });
 

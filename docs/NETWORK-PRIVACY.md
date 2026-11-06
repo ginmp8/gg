@@ -14,7 +14,7 @@ database. The user's click is the authorization, as in the
 and an extra environment variable is **not** required for this normal flow.
 
 GitHub pull-request enrichment is separate: the `gh` CLI is only invoked
-when `GITA_ALLOW_GITHUB_METADATA=1` and `GITA_OFFLINE` is not set to 1.
+by default when the GitHub CLI is installed/authenticated. Set `GITA_ALLOW_GITHUB_METADATA=0` or `GITA_OFFLINE=1` to disable network metadata reads.
 Core Git metrics continue to work when the CLI is missing or disabled.
 
 ## Network policy
@@ -25,7 +25,7 @@ Core Git metrics continue to work when the CLI is missing or disabled.
 | Click Refresh on registered remote | Allowed | Fetches only the URL registered for that repository |
 | `GITA_ALLOW_REMOTE_GIT=1` | Unset | Also authorizes remote Git for explicitly invoked non-UI workflows |
 | `GITA_ALLOW_REMOTE_GIT=0` | Unset | Denies remote Git, including manual Refresh |
-| `GITA_ALLOW_GITHUB_METADATA=1` | Unset | Enables optional read-only `gh` queries during refresh |
+| `GITA_ALLOW_GITHUB_METADATA=0` | Unset | Explicitly disables read-only `gh` discovery/PR/review queries; otherwise enabled by default |
 | `GITA_OFFLINE=1` | Unset | Denies Git remotes and `gh` regardless of any other permission |
 
 Set an override **before starting** the application; restart afterward.
@@ -37,10 +37,11 @@ npm run dev
 ```
 
 For ordinary remote repositories, start Gita normally and click Refresh.
-When GitHub PR metadata is needed, enable that capability separately:
+Read-only GitHub metadata is available by default after you install and authenticate `gh`.
+To disable it explicitly:
 
 ```powershell
-$env:GITA_ALLOW_GITHUB_METADATA = "1"
+$env:GITA_ALLOW_GITHUB_METADATA = "0"
 npm run dev
 ```
 
@@ -54,9 +55,8 @@ or contact a hosted analytics service.
 Explicit project/repository Refresh operations index missing annual metrics
 after updating their mirrors. The separate **Index local history** action
 uses existing mirrors only and does not contact external Git services.
-The optional **Fetch GitHub PRs and reviews (network)** action requires the
-independent `GITA_ALLOW_GITHUB_METADATA=1` setting and authenticated
-GitHub CLI. The application stores PR/review summaries and email associations
+The optional **Fetch GitHub PRs and reviews (network)** action requires an authenticated
+GitHub CLI. It is enabled by default, but never runs without a user-initiated fetch action. The application stores PR/review summaries and email associations
 locally, not in an external database.
 
 Project deletion removes only app-owned cached mirrors and scoped SQLite
@@ -69,8 +69,8 @@ and methodology.
 The `GitHub import` picker uses `gh api --paginate` to list only authorized
 repository **metadata** (name, clone URL, visibility, archive status,
 last push, and default branch) after the user presses **Discover accessible
-repositories (network)**. The feature requires `GITA_ALLOW_GITHUB_METADATA=1`
-and is disabled by `GITA_OFFLINE=1`.
+repositories (network)**. The feature is enabled by default and is disabled by `GITA_OFFLINE=1`
+or `GITA_ALLOW_GITHUB_METADATA=0`.
 
 Registering selected entries (maximum 25) saves local repository metadata
 without cloning, fetching or modifying any remote. A separate **Refresh**

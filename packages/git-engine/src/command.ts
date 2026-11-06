@@ -55,7 +55,7 @@ export async function runProcess(
   // commands. Do not start it until the user explicitly opts in.
   if (command === "gh" && !isGitHubMetadataAllowed()) {
     throw new Error(
-      "GitHub metadata access is disabled. Set GITA_ALLOW_GITHUB_METADATA=1 to enable it."
+      "GitHub metadata is disabled by GITA_OFFLINE=1 or GITA_ALLOW_GITHUB_METADATA=0."
     );
   }
 

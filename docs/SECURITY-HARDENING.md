@@ -79,7 +79,8 @@ regardless of a click. Git subprocesses only allow file, HTTPS and SSH
 transports when authorized; local-source refreshes remain file-only.
 Cached mirror fetches use the URL stored by Gita, not a possibly altered
 origin. The GitHub adapter still requires independent
-`GITA_ALLOW_GITHUB_METADATA=1` consent and does not contact GitHub during
+read-only GitHub access (enabled by default; disabled by `GITA_OFFLINE=1` or
+`GITA_ALLOW_GITHUB_METADATA=0`) and does not contact GitHub during
 local-only analysis.
 
 The Next.js CLI telemetry option remains disabled in the `dev` and

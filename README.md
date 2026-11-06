@@ -134,7 +134,7 @@ first start.
 The **GitHub import** button in the dashboard header can list repositories you
 can access with the already authenticated `gh` CLI. Listing is **explicit**,
 never a side effect of opening the UI; it requires
-`GITA_ALLOW_GITHUB_METADATA=1`. The picker filters by owner, visibility,
+read-only GitHub metadata access enabled by default (`GITA_ALLOW_GITHUB_METADATA=0` disables it). The picker filters by owner, visibility,
 archived status and name, and can register up to **25 repositories** per
 click. Listing and registration store metadata only. Click **Refresh
 project** to clone their Git mirrors into the local app cache.

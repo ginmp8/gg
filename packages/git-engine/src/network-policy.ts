@@ -15,6 +15,7 @@ export function isRemoteGitAllowed(
     && (userInitiatedRefresh || env.GITA_ALLOW_REMOTE_GIT === "1");
 }
 
+/** Read-only GitHub metadata is enabled by default; explicit offline switches win. */
 export function isGitHubMetadataAllowed(env: NodeJS.ProcessEnv = process.env): boolean {
-  return env.GITA_OFFLINE !== "1" && env.GITA_ALLOW_GITHUB_METADATA === "1";
+  return env.GITA_OFFLINE !== "1" && env.GITA_ALLOW_GITHUB_METADATA !== "0";
 }

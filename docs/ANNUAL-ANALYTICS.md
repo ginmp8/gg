@@ -81,7 +81,7 @@ and backups as appropriate.
 
 GitHub PR/review snapshots are separate from Git-based metrics. They are
 downloaded only after an explicit click on **Fetch GitHub PRs and reviews
-(network)** with `GITA_ALLOW_GITHUB_METADATA=1`. The GitHub CLI must be
+(network)** (enabled by default; can be disabled with `GITA_ALLOW_GITHUB_METADATA=0`). The GitHub CLI must be
 installed and authenticated. The operation is read-only and does not upload
 repository contents. It caches sanitized PR/review metadata locally.
 
