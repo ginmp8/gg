@@ -95,15 +95,30 @@ try {
   browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: {width:1440,height:900},
     deviceScaleFactor: 1, colorScheme:"dark", reducedMotion:"reduce" });
+  const browserErrors = [];
+  page.on("pageerror", error => browserErrors.push("Uncaught: " + error.message));
+  page.on("console", message => {
+    if (message.type() === "error") browserErrors.push("Console: " + message.text());
+  });
+  async function capture(name) {
+    await page.evaluate(async () => { await document.fonts.ready; });
+    if (await page.locator("nextjs-portal").count()) {
+      throw new Error("Next.js development overlay detected: use a production web server");
+    }
+    if (browserErrors.length) {
+      throw new Error("Browser errors prevented clean screenshots:\n" + browserErrors.join("\n"));
+    }
+    await page.screenshot({path:path.join(root,"assets",name+".png"),animations:"disabled"});
+  }
   await page.goto(app, { waitUntil:"domcontentloaded" });
   await expect(page.getByRole("heading", {name:"GG Analytics"})).toBeVisible({timeout:30000});
   await expect(page.getByText("GG Analytics Demo").first()).toBeVisible();
   // Readable screenshots, consistent viewport and no flaky animation frames.
-  await page.screenshot({path:path.join(root,"assets/app.png"),animations:"disabled"});
+  await capture("app");
   await page.getByRole("tab",{name:"Contributors",exact:true}).click();
-  await page.screenshot({path:path.join(root,"assets/contributors.png"),animations:"disabled"});
+  await capture("contributors");
   await page.getByRole("tab",{name:"Files & focus",exact:true}).click();
-  await page.screenshot({path:path.join(root,"assets/files.png"),animations:"disabled"});
+  await capture("files");
   console.log("Captured GG Analytics screenshots: app, contributors, files");
 } finally {
   if (browser) await browser.close();

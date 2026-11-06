@@ -38,14 +38,20 @@ jobs:
         run: npm ci
       - name: Install Chromium for reproducible screenshots
         run: npx playwright install --with-deps chromium
-      - name: Run the app and capture its actual UI
+      - name: Build production web frontend (without Next.js development overlays)
+        run: npm --workspace @gg/web run build
+      - name: Run API and production web, then capture actual UI
         shell: bash
         run: |
-          npm run dev > "$RUNNER_TEMP/gg-analytics-dev.log" 2>&1 &
-          server_pid=$!
-          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          npm --workspace @gg/api run dev > "$RUNNER_TEMP/gg-analytics-api.log" 2>&1 &
+          api_pid=$!
+          (cd apps/web && node ../../scripts/next.mjs start -H 127.0.0.1 -p 4444) > "$RUNNER_TEMP/gg-analytics-web.log" 2>&1 &
+          web_pid=$!
+          trap 'kill "$api_pid" "$web_pid" 2>/dev/null || true' EXIT
           node scripts/gg-screenshots.mjs || {
-            tail -n 120 "$RUNNER_TEMP/gg-analytics-dev.log"
+            echo "::error::Screenshot capture failed; inspect the API and web logs below."
+            tail -n 120 "$RUNNER_TEMP/gg-analytics-api.log"
+            tail -n 120 "$RUNNER_TEMP/gg-analytics-web.log"
             exit 1
           }
       - name: Commit refreshed screenshots to development only

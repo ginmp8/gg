@@ -54,10 +54,21 @@ for origin and copyright attribution.
 
 ## Reproducing screenshots
 
-With Node 24 and Chromium installed (`npx playwright install chromium`), start
-the local app using `npm run dev`, then run `npm run screenshots` from a
-second terminal. This captures the real dashboard, Contributors, and Files &
-focus views into the three PNG assets. The script creates a disposable local
+With Node 24 and Chromium installed (`npx playwright install chromium`), build
+and run the **production web frontend** when regenerating documentation images.
+Do not use `npm run dev` for screenshots: Next.js development overlays and
+issue badges appear in the captured image.
+
+From the repository root, run `npm --workspace @gg/web run build`, start the
+local API with `npm --workspace @gg/api run dev` in one terminal, and start
+the production web server with
+`(cd apps/web && node ../../scripts/next.mjs start -H 127.0.0.1 -p 4444)`
+in another. Finally run `npm run screenshots` in a third terminal. The
+capture fails if a Next.js development overlay or browser JavaScript errors
+are detected; the CI job does not publish incomplete images.
+
+This captures the real dashboard, Contributors, and Files & focus views into the
+three PNG assets. The script creates a disposable local
 Git fixture with synthetic authors, refreshes it and removes the fixture on
 exit; never use sensitive repositories or hosted GitHub credentials.
 
