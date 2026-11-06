@@ -49,6 +49,13 @@ import {
   updateBranchView,
   updateProject,
   updateRepositoryRecord,
+  TagTargetNotFound,
+  createProjectTag,
+  deleteProjectTag,
+  listProjectTagTargets,
+  listProjectTags,
+  setProjectTagAssignment,
+  updateProjectTag,
   type GitaDatabase
 } from "@gita/db";
 import { compareLocalBranches, isGitHubMetadataAllowed, resolveRepositoryInput } from "@gita/git-engine";
@@ -243,6 +250,78 @@ export function registerRoutes(server: FastifyInstance, database: GitaDatabase):
       results.push(await syncAnnualGitHubCollaboration(database, source));
     }
     return { items: results };
+  });
+
+
+  // Project-scoped, fully user-defined tags with explicit entity assignment.
+  const tagInput = z.object({
+    name: z.string().trim().min(1).max(80).refine(s => !/[\x00-\x1f\x7f]/.test(s)),
+    group: z.string().trim().max(48).refine(s => !/[\x00-\x1f\x7f]/.test(s)).default("")
+  });
+  const tagParams = z.object({ projectId: z.string().min(1), tagId: z.string().uuid() });
+  const assignmentInput = z.object({
+    targetType: z.enum(["contributor","repository","branch","pull_request"]),
+    targetKey: z.string().trim().min(1).max(500)
+  });
+  server.get("/api/projects/:projectId/tags", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    if (!await getProject(database, requireId(projectId))) return reply.status(404).send({error:"not_found"});
+    return listProjectTags(database,requireId(projectId));
+  });
+  server.post("/api/projects/:projectId/tags", async (request, reply) => {
+    const { projectId } = idParamsSchema.parse(request.params);
+    if (!await getProject(database, requireId(projectId))) return reply.status(404).send({error:"not_found"});
+    const input = tagInput.parse(request.body);
+    try { return reply.status(201).send(createProjectTag(database, requireId(projectId), input)); }
+    catch (error) {
+      if (isUniqueConstraintError(error)) return reply.status(409).send({error:"duplicate_tag"});
+      throw error;
+    }
+  });
+  server.patch("/api/projects/:projectId/tags/:tagId", async (request, reply) => {
+    const {projectId,tagId} = tagParams.parse(request.params);
+    if (!await getProject(database,projectId)) return reply.status(404).send({error:"not_found"});
+    try {
+      return updateProjectTag(database,projectId,tagId,tagInput.parse(request.body)) ??
+        reply.status(404).send({error:"not_found"});
+    } catch (error) {
+      if (isUniqueConstraintError(error)) return reply.status(409).send({error:"duplicate_tag"});
+      throw error;
+    }
+  });
+  server.delete("/api/projects/:projectId/tags/:tagId", async (request, reply) => {
+    const {projectId,tagId} = tagParams.parse(request.params);
+    if (!await getProject(database,projectId)) return reply.status(404).send({error:"not_found"});
+    return deleteProjectTag(database,projectId,tagId)
+      ? reply.status(204).send() : reply.status(404).send({error:"not_found"});
+  });
+  server.get("/api/projects/:projectId/tag-targets", async (request, reply) => {
+    const {projectId} = idParamsSchema.parse(request.params);
+    if (!await getProject(database,requireId(projectId))) return reply.status(404).send({error:"not_found"});
+    const query = z.object({
+      type:z.enum(["contributor","repository","branch","pull_request"]),
+      search:z.string().trim().max(100).default("")
+    }).parse(request.query);
+    return listProjectTagTargets(database,requireId(projectId),query.type,query.search);
+  });
+  server.post("/api/projects/:projectId/tags/:tagId/assignments", async (request,reply) => {
+    const {projectId,tagId}=tagParams.parse(request.params);
+    if (!await getProject(database,projectId)) return reply.status(404).send({error:"not_found"});
+    const {targetType,targetKey}=assignmentInput.parse(request.body);
+    try {
+      return setProjectTagAssignment(database,projectId,tagId,targetType,targetKey,true)
+        ? reply.status(204).send() : reply.status(404).send({error:"not_found"});
+    } catch (error) {
+      if (error instanceof TagTargetNotFound) return reply.status(422).send({error:"invalid_tag_target"});
+      throw error;
+    }
+  });
+  server.delete("/api/projects/:projectId/tags/:tagId/assignments", async (request,reply) => {
+    const {projectId,tagId}=tagParams.parse(request.params);
+    if (!await getProject(database,projectId)) return reply.status(404).send({error:"not_found"});
+    const {targetType,targetKey}=assignmentInput.parse(request.body);
+    return setProjectTagAssignment(database,projectId,tagId,targetType,targetKey,false)
+      ? reply.status(204).send() : reply.status(404).send({error:"not_found"});
   });
 
   server.get("/api/projects/:projectId/branch-views", async (request, reply) => {

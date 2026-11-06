@@ -336,6 +336,25 @@ export function migrateDatabase(sqlite: BetterSqlite3.Database): void {
     CREATE INDEX IF NOT EXISTS annual_pr_reviewer_idx
       ON annual_pr_reviews(repo_id, reviewer_login, submitted_at);
 
+    -- Additive project-scoped user-defined tags; no default tags are inserted.
+    CREATE TABLE IF NOT EXISTS project_tags (
+      id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+      name TEXT NOT NULL COLLATE NOCASE,
+      group_name TEXT NOT NULL COLLATE NOCASE DEFAULT '',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS project_tag_unique_idx
+      ON project_tags(project_id,group_name,name);
+    CREATE TABLE IF NOT EXISTS project_tag_assignments (
+      tag_id TEXT NOT NULL REFERENCES project_tags(id) ON DELETE CASCADE,
+      target_type TEXT NOT NULL CHECK(target_type IN ('contributor','repository','branch','pull_request')),
+      target_key TEXT NOT NULL,
+      PRIMARY KEY (tag_id,target_type,target_key)
+    );
+    CREATE INDEX IF NOT EXISTS project_tag_assignment_idx ON project_tag_assignments(target_type,target_key);
+
     CREATE INDEX IF NOT EXISTS repositories_project_idx ON repositories(project_id);
     CREATE INDEX IF NOT EXISTS repositories_provider_idx ON repositories(provider);
     CREATE INDEX IF NOT EXISTS branch_views_project_idx ON branch_views(project_id);
