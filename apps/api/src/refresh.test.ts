@@ -23,7 +23,7 @@ function createSource(root: string, name: string): string {
   fs.writeFileSync(path.join(source, "README.md"), `# ${name}\n`);
   execFileSync("git", ["-C", source, "add", "README.md"], { stdio: "ignore" });
   execFileSync("git", [
-    "-C", source, "-c", "user.name=Fixture", "-c", "user.email=${name}@example.test",
+    "-C", source, "-c", "user.name=Fixture", "-c", `user.email=${name}@example.test`,
     "commit", "-m", "initial"
   ], {
     stdio: "ignore",
