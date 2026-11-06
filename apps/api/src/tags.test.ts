@@ -4,7 +4,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   createProject, createRepositoryRecord, listProjectTags, openGitaDatabase,
-  replacePullRequests, storeRepositoryAnalysis
+  replacePullRequests, storeRepositoryAnalysis, saveAnnualBatch, upsertAnnualIdentity
 } from "@gita/db";
 import { buildServer } from "./server";
 
@@ -170,6 +170,55 @@ describe("project-scoped flexible tagging and multi-repo inventories", () => {
       expect(empty.statusCode).toBe(400);
     } finally {
       await server.close();db.sqlite.close();fs.rmSync(root,{recursive:true,force:true});
+    }
+  });
+
+  it("tags annual-only contributors using canonical identity even without recent commits", async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gita-tags-annual-"));
+    const db = openGitaDatabase(root);
+    const server = await buildServer(db);
+    try {
+      const project = await createProject(db, { name: "Full annual history" });
+      const repo = await createRepositoryRecord(db, project.id, {
+        name: "Historical code", provider: "local", fetchUrl: "/tmp/historical",
+        localPath: "/tmp/historical", githubOwnerRepo: null
+      });
+      saveAnnualBatch(db, repo.id, [{
+        hash: "f".repeat(40), authorEmail: "old@example.test", authorName: "Annual Author",
+        authorDate: "2026-01-02T00:00:00.000Z", grossChurn: 4, renameAwareChurn: 4,
+        adjustedChurn: 4, estimatedMoveChurn: 0, estimatedWhitespaceChurn: 0,
+        sourceChurn: 4, testChurn: 0, docsChurn: 0, generatedChurn: 0, reviewableChurn: 4,
+        movedFiles: 0, pureMoves: 0, binaryFiles: 0, substantiveCommits: 1,
+        cosmeticOnlyCommits: 0, testTouchedCommits: 0, changes: []
+      }]);
+      upsertAnnualIdentity(db, project.id, {
+        email: "old@example.test", canonicalEmail: "canonical@example.test", githubLogin: null
+      });
+      const results = await server.inject({
+        method: "GET",
+        url: "/api/projects/" + project.id + "/tag-targets?type=contributor&search=canonical"
+      });
+      expect(results.statusCode, results.body).toBe(200);
+      expect(results.json().items).toMatchObject([
+        { type: "contributor", key: "canonical@example.test", label: "Annual Author" }
+      ]);
+      const tag = await server.inject({
+        method: "POST", url: "/api/projects/" + project.id + "/tags",
+        payload: { group: "Our team", name: "Backend" }
+      });
+      const assigned = await server.inject({
+        method: "POST",
+        url: "/api/projects/" + project.id + "/tags/" + tag.json().id + "/assignments/bulk",
+        payload: { targetType: "contributor", targetKeys: ["canonical@example.test"] }
+      });
+      expect(assigned.statusCode, assigned.body).toBe(200);
+      expect(listProjectTags(db, project.id).assignments).toMatchObject([
+        { tagId: tag.json().id, targetType: "contributor", targetKey: "canonical@example.test" }
+      ]);
+    } finally {
+      await server.close();
+      db.sqlite.close();
+      fs.rmSync(root, { recursive: true, force: true });
     }
   });
 
