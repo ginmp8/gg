@@ -263,6 +263,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let built = tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
+            // Tauri runs setup during App::run(), where Err would otherwise
+            // panic outside the Builder::build() error handler.
+            let startup = (|| -> Result<(), Box<dyn std::error::Error>> {
             let resource_dir = app.path().resource_dir()?;
             let data_dir = app.path().app_data_dir()?;
             fs::create_dir_all(&data_dir)?;
@@ -373,6 +376,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .initialization_script(init_script)
                 .build()?;
             Ok(())
+            })();
+            if let Err(error) = &startup {
+                show_startup_error(&format!("GG Analytics could not start:\n\n{error}"));
+            }
+            startup
         })
         .build(tauri::generate_context!());
 
