@@ -12,7 +12,7 @@ jobs:
   delete-merged-branches:
     # Not a reusable administration workflow: only the uniquely named
     # operator-authorized commit on the target repository can execute it.
-    if: ${{ github.repository == 'ginmp8/gita' && github.ref == 'refs/heads/development' && github.event.head_commit.message == 'chore(repo): clean up consolidated branches' }}
+    if: "${{ github.repository == 'ginmp8/gita' && github.ref == 'refs/heads/development' && github.event.head_commit.message == 'chore(repo): clean up consolidated branches' }}"
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
