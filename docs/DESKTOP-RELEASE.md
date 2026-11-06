@@ -1,11 +1,11 @@
-# Gita Desktop 0.2.0 — release candidate
+# GG Desktop 0.2.0 — release candidate
 
 **Status:** candidate on development only. No v0.2.0 tag, installer publication or GitHub Release has been created.
 
 ## New capabilities
 
 - Full-history annual contribution analytics, incremental local SQLite indexing and ICE-Git/1 contribution evidence.
-- Experimental Gita-Throughput/1 technical productivity proxy; traceable per-developer diff and commit samples.
+- Experimental GG-Throughput/1 technical productivity proxy; traceable per-developer diff and commit samples.
 - Compare two to four selected contributors side by side with user-created tag filtering.
 - Project-wide branch and PR inventories with repository source columns and pagination.
 - User-defined custom tags and optional groups, assignable to contributors, repos, branches and pull requests.
@@ -22,7 +22,7 @@
 ## Upgrade and validation
 
 Version 0.2.0 adds additive project_tags and project_tag_assignments SQLite tables.
-Back up the Gita data directory before upgrading. No analyzed Git source repository is modified.
+Back up the GG data directory before upgrading. No analyzed Git source repository is modified.
 Scores are experimental technical signals rather than objective measures of productivity.
 Unsigned installers can trigger platform warnings. Graphical testing and signing/notarization
 should precede broad distribution.

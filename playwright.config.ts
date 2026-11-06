@@ -25,7 +25,7 @@ export default defineConfig({
     reuseExistingServer: true,
     timeout: 120_000,
     env: {
-      GITA_DATA_DIR: "/tmp/gita-playwright"
+      GG_DATA_DIR: "/tmp/gg-playwright"
     }
   }
 });

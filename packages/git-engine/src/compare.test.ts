@@ -18,7 +18,7 @@ function commit(root: string, filename: string, text: string): void {
 
 describe("local read-only branch comparison", () => {
   it("returns correct three-dot ahead/behind and a bounded list of changed files", async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gita-branch-compare-"));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gg-branch-compare-"));
     try {
       execFileSync("git", ["init", "--initial-branch=main", root], { stdio: "ignore" });
       commit(root, "common.txt", "common");

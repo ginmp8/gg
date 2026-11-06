@@ -1,5 +1,5 @@
 {
-  "name": "@gita/db",
+  "name": "@gg/db",
   "version": "0.2.0",
   "private": true,
   "type": "module",
@@ -18,7 +18,7 @@
     "studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@gita/core": "0.2.0",
+    "@gg/core": "0.2.0",
     "better-sqlite3": "^12.10.0",
     "drizzle-orm": "0.45.4",
     "zod": "4.6.7"

@@ -1,7 +1,7 @@
 "use client";
 
-import type { AnnualMonthly } from "@gita/core";
-import { tagsForTarget } from "@gita/core";
+import type { AnnualMonthly } from "@gg/core";
+import { tagsForTarget } from "@gg/core";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeftRight, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -113,7 +113,7 @@ export function ContributorSideBySide({
   ];
   function exportSelected() {
     if (!data || chosen.length < 2) return;
-    downloadLocalReport("gita-comparison-" + year + ".json", "application/json;charset=utf-8",
+    downloadLocalReport("gg-comparison-" + year + ".json", "application/json;charset=utf-8",
       JSON.stringify({
         methodology: data.evidenceScores.methodology,
         productivityMethodology: data.evidenceScores.productivityMethodology,
@@ -354,7 +354,7 @@ export function ContributorSideBySide({
 
           <p className="text-xs leading-relaxed text-muted-foreground">
             Highlighting indicates the highest value of each measure, not the best employee.
-            ICE-Git/1 and Gita-Throughput/1 are experimental, cohort-relative Git evidence proxies.
+            ICE-Git/1 and GG-Throughput/1 are experimental, cohort-relative Git evidence proxies.
             Roles, workload, pairing, review context and delivery outcomes are not controlled.
             {tagId && tagById.has(tagId) ? " Tag filters affect displayed candidates, not reference quantiles." : ""}
           </p>

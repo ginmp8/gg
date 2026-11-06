@@ -2,18 +2,18 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { openGitaDatabase, type GitaDatabase } from "@gita/db";
+import { openGGDatabase, type GGDatabase } from "@gg/db";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { buildServer } from "./server";
 
 const tempRoots: string[] = [];
-const databases: GitaDatabase[] = [];
+const databases: GGDatabase[] = [];
 
-function createTestDatabase(): GitaDatabase {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "gita-api-"));
+function createTestDatabase(): GGDatabase {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "gg-api-"));
   tempRoots.push(root);
-  const database = openGitaDatabase(root);
+  const database = openGGDatabase(root);
   databases.push(database);
   return database;
 }
@@ -73,25 +73,25 @@ describe("API server CORS", () => {
   });
 
   it("allows explicitly configured origins", async () => {
-    vi.stubEnv("GITA_ALLOWED_WEB_ORIGINS", "https://gita.example.test");
+    vi.stubEnv("GG_ALLOWED_WEB_ORIGINS", "https://gg.example.test");
     const server = await buildServer(createTestDatabase());
     try {
       const response = await server.inject({
         method: "OPTIONS",
         url: "/api/branch-views/test",
         headers: {
-          origin: "https://gita.example.test",
+          origin: "https://gg.example.test",
           "access-control-request-method": "PATCH"
         }
       });
-      expect(response.headers["access-control-allow-origin"]).toBe("https://gita.example.test");
+      expect(response.headers["access-control-allow-origin"]).toBe("https://gg.example.test");
     } finally {
       await server.close();
     }
   });
 
   it("rejects wildcard CORS configuration", async () => {
-    vi.stubEnv("GITA_ALLOWED_WEB_ORIGINS", "*");
+    vi.stubEnv("GG_ALLOWED_WEB_ORIGINS", "*");
     await expect(buildServer(createTestDatabase())).rejects.toThrow(/exact HTTP\(S\) origins/);
   });
 
@@ -118,13 +118,13 @@ describe("API server CORS", () => {
   });
 
   it("allows an explicitly trusted API hostname", async () => {
-    vi.stubEnv("GITA_ALLOWED_API_HOSTS", "gita.example.test");
+    vi.stubEnv("GG_ALLOWED_API_HOSTS", "gg.example.test");
     const server = await buildServer(createTestDatabase());
     try {
       const response = await server.inject({
         method: "GET",
         url: "/api/health",
-        headers: { host: "gita.example.test" }
+        headers: { host: "gg.example.test" }
       });
       expect(response.statusCode).toBe(200);
     } finally {
@@ -134,7 +134,7 @@ describe("API server CORS", () => {
 
   it("requires a session token for desktop API requests", async () => {
     const token = "a".repeat(64);
-    vi.stubEnv("GITA_DESKTOP_TOKEN", token);
+    vi.stubEnv("GG_DESKTOP_TOKEN", token);
     const server = await buildServer(createTestDatabase());
     try {
       const unauthorized = await server.inject({ method: "GET", url: "/api/health" });
@@ -158,7 +158,7 @@ describe("API server CORS", () => {
 
   it("keeps desktop CORS limited to internal origins", async () => {
     const token = "a".repeat(64);
-    vi.stubEnv("GITA_DESKTOP_TOKEN", token);
+    vi.stubEnv("GG_DESKTOP_TOKEN", token);
     const server = await buildServer(createTestDatabase());
     try {
       const internal = await server.inject({
@@ -179,7 +179,7 @@ describe("API server CORS", () => {
   });
 
   it("rejects malformed desktop tokens rather than disabling authentication", async () => {
-    vi.stubEnv("GITA_DESKTOP_TOKEN", "short");
+    vi.stubEnv("GG_DESKTOP_TOKEN", "short");
     await expect(buildServer(createTestDatabase())).rejects.toThrow(/256-bit/);
   });
 });

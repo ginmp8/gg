@@ -1,5 +1,5 @@
 {
-  "name": "gita",
+  "name": "gg-analytics",
   "version": "0.2.0",
   "private": true,
   "type": "module",
@@ -18,12 +18,13 @@
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",
-    "db:generate": "npm --workspace @gita/db run generate",
-    "db:migrate": "npm --workspace @gita/db run migrate",
-    "db:studio": "npm --workspace @gita/db run studio",
+    "db:generate": "npm --workspace @gg/db run generate",
+    "db:migrate": "npm --workspace @gg/db run migrate",
+    "db:studio": "npm --workspace @gg/db run studio",
     "desktop:prepare": "node scripts/desktop/prepare.mjs",
     "desktop:check": "node --test scripts/desktop/*.test.mjs",
-    "cli": "node --import tsx scripts/gita-cli.ts"
+    "cli": "node --import tsx scripts/gg-cli.ts",
+    "screenshots": "node scripts/gg-screenshots.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",

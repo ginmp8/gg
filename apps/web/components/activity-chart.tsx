@@ -1,6 +1,6 @@
 "use client";
 
-import type { ActivityBucket } from "@gita/core";
+import type { ActivityBucket } from "@gg/core";
 import * as echarts from "echarts";
 import { useEffect, useRef } from "react";
 

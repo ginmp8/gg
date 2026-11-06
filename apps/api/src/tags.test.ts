@@ -3,9 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
-  createProject, createRepositoryRecord, listProjectTags, openGitaDatabase,
+  createProject, createRepositoryRecord, listProjectTags, openGGDatabase,
   replacePullRequests, storeRepositoryAnalysis, saveAnnualBatch, upsertAnnualIdentity
-} from "@gita/db";
+} from "@gg/db";
 import { buildServer } from "./server";
 
 function commit(hash: string, email: string) {
@@ -43,8 +43,8 @@ function pr(repoId: string, number: number) {
 
 describe("project-scoped flexible tagging and multi-repo inventories", () => {
   it("preserves free-form labels, rejects foreign entities, supports four targets and cascades", async () => {
-    const root=fs.mkdtempSync(path.join(os.tmpdir(),"gita-tags-"));
-    const db=openGitaDatabase(root);const server=await buildServer(db);
+    const root=fs.mkdtempSync(path.join(os.tmpdir(),"gg-tags-"));
+    const db=openGGDatabase(root);const server=await buildServer(db);
     try {
       const p=await createProject(db,{name:"One"}),other=await createProject(db,{name:"Other"});
       const repo=await createRepositoryRecord(db,p.id,{
@@ -105,8 +105,8 @@ describe("project-scoped flexible tagging and multi-repo inventories", () => {
   });
 
   it("lists branches and PRs across repositories with correct names and pagination", async () => {
-    const root=fs.mkdtempSync(path.join(os.tmpdir(),"gita-multi-repo-"));
-    const db=openGitaDatabase(root);const server=await buildServer(db);
+    const root=fs.mkdtempSync(path.join(os.tmpdir(),"gg-multi-repo-"));
+    const db=openGGDatabase(root);const server=await buildServer(db);
     try {
       const project=await createProject(db,{name:"Project"});
       const repoA=await createRepositoryRecord(db,project.id,{
@@ -136,8 +136,8 @@ describe("project-scoped flexible tagging and multi-repo inventories", () => {
     }
   });
   it("applies multiple assignments atomically and rejects any foreign target without partial writes", async () => {
-    const root=fs.mkdtempSync(path.join(os.tmpdir(),"gita-tag-bulk-"));
-    const db=openGitaDatabase(root);
+    const root=fs.mkdtempSync(path.join(os.tmpdir(),"gg-tag-bulk-"));
+    const db=openGGDatabase(root);
     const server=await buildServer(db);
     try {
       const p=await createProject(db,{name:"Local project"});
@@ -174,8 +174,8 @@ describe("project-scoped flexible tagging and multi-repo inventories", () => {
   });
 
   it("tags annual-only contributors using canonical identity even without recent commits", async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gita-tags-annual-"));
-    const db = openGitaDatabase(root);
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gg-tags-annual-"));
+    const db = openGGDatabase(root);
     const server = await buildServer(db);
     try {
       const project = await createProject(db, { name: "Full annual history" });

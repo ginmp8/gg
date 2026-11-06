@@ -1,6 +1,6 @@
 "use client";
 
-import type { Branch, BranchComparison } from "@gita/core";
+import type { Branch, BranchComparison } from "@gg/core";
 import { useEffect, useMemo, useState } from "react";
 
 import { getBranchComparison } from "@/lib/api";

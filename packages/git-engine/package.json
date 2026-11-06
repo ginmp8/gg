@@ -1,5 +1,5 @@
 {
-  "name": "@gita/git-engine",
+  "name": "@gg/git-engine",
   "version": "0.2.0",
   "private": true,
   "type": "module",
@@ -15,7 +15,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@gita/core": "0.2.0"
+    "@gg/core": "0.2.0"
   },
   "devDependencies": {
     "vitest": "^3.2.2"

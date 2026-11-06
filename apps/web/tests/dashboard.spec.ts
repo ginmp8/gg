@@ -11,7 +11,7 @@ test("renders the product dashboard empty state", async ({ page }) => {
 
   await page.goto("/");
 
-  await expect(page.getByRole("heading", { name: "Gita" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "GG" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "No projects yet" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Project" }).first()).toBeVisible();
 });

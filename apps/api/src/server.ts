@@ -3,11 +3,11 @@ import { timingSafeEqual } from "node:crypto";
 import Fastify, { type FastifyInstance } from "fastify";
 import { ZodError } from "zod";
 
-import type { GitaDatabase } from "@gita/db";
+import type { GGDatabase } from "@gg/db";
 
 import { registerRoutes } from "./routes";
 
-export async function buildServer(database: GitaDatabase): Promise<FastifyInstance> {
+export async function buildServer(database: GGDatabase): Promise<FastifyInstance> {
   const server = Fastify({
     logger: {
       level: process.env.LOG_LEVEL ?? "info"
@@ -16,12 +16,12 @@ export async function buildServer(database: GitaDatabase): Promise<FastifyInstan
 
   // A loopback-only unauthenticated API must also reject hostile Host headers:
   // browser same-origin policy does not protect against DNS rebinding.
-  const additionalHosts = (process.env.GITA_ALLOWED_API_HOSTS ?? "")
+  const additionalHosts = (process.env.GG_ALLOWED_API_HOSTS ?? process.env.GITA_ALLOWED_API_HOSTS ?? "")
     .split(",")
     .map((host) => host.trim().toLowerCase())
     .filter(Boolean);
   if (additionalHosts.some((host) => !/^[a-z0-9.-]+$/.test(host))) {
-    throw new Error("GITA_ALLOWED_API_HOSTS must contain exact hostnames.");
+    throw new Error("GG_ALLOWED_API_HOSTS must contain exact hostnames.");
   }
   const allowedHosts = new Set(["localhost", "127.0.0.1", "[::1]", ...additionalHosts]);
   server.addHook("onRequest", async (request, reply) => {
@@ -31,16 +31,16 @@ export async function buildServer(database: GitaDatabase): Promise<FastifyInstan
     }
   });
 
-  // Only the two actual Gita dashboard origins are trusted implicitly.
+  // Only the two actual GG dashboard origins are trusted implicitly.
   // Explicitly configured extra origins are not a substitute for authentication.
-  const configuredOrigins = (process.env.GITA_ALLOWED_WEB_ORIGINS ?? "")
+  const configuredOrigins = (process.env.GG_ALLOWED_WEB_ORIGINS ?? process.env.GITA_ALLOWED_WEB_ORIGINS ?? "")
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
   const allowedOrigins = [
     "http://127.0.0.1:4444",
     "http://localhost:4444",
-    ...(process.env.GITA_DESKTOP_TOKEN
+    ...((process.env.GG_DESKTOP_TOKEN ?? process.env.GITA_DESKTOP_TOKEN)
       ? ["tauri://localhost", "http://tauri.localhost", "https://tauri.localhost"]
       : []),
     ...configuredOrigins.map((origin) => {
@@ -48,7 +48,7 @@ export async function buildServer(database: GitaDatabase): Promise<FastifyInstan
       try {
         parsed = new URL(origin);
       } catch {
-        throw new Error("GITA_ALLOWED_WEB_ORIGINS must contain exact HTTP(S) origins.");
+        throw new Error("GG_ALLOWED_WEB_ORIGINS must contain exact HTTP(S) origins.");
       }
       if (
         !["http:", "https:"].includes(parsed.protocol) ||
@@ -56,7 +56,7 @@ export async function buildServer(database: GitaDatabase): Promise<FastifyInstan
         parsed.username ||
         parsed.password
       ) {
-        throw new Error("GITA_ALLOWED_WEB_ORIGINS must contain exact HTTP(S) origins.");
+        throw new Error("GG_ALLOWED_WEB_ORIGINS must contain exact HTTP(S) origins.");
       }
       return origin;
     })
@@ -69,10 +69,10 @@ export async function buildServer(database: GitaDatabase): Promise<FastifyInstan
 
   // In a packaged desktop build the backend is loopback-only, but still
   // requires an unpredictable per-process token: CORS/Host are not auth.
-  const desktopToken = process.env.GITA_DESKTOP_TOKEN;
+  const desktopToken = process.env.GG_DESKTOP_TOKEN ?? process.env.GITA_DESKTOP_TOKEN;
   if (desktopToken) {
     if (!/^[a-f0-9]{64}$/.test(desktopToken)) {
-      throw new Error("GITA_DESKTOP_TOKEN must be a 256-bit lowercase hex token.");
+      throw new Error("GG_DESKTOP_TOKEN must be a 256-bit lowercase hex token.");
     }
     const expected = Buffer.from(`Bearer ${desktopToken}`);
     server.addHook("onRequest", async (request, reply) => {

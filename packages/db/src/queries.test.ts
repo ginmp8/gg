@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { openGitaDatabase } from "./client";
+import { openGGDatabase } from "./client";
 import {
   createBranchView,
   createProject,
@@ -20,8 +20,8 @@ import {
 
 describe("analytics queries", () => {
   it("filters commit metrics by branch membership", async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gita-db-"));
-    const database = openGitaDatabase(tmpDir);
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gg-db-"));
+    const database = openGGDatabase(tmpDir);
     try {
       const project = await createProject(database, { name: "Fixture" });
       const repository = await createRepositoryRecord(database, project.id, {
@@ -85,8 +85,8 @@ describe("analytics queries", () => {
   });
 
   it("stores editable branch views per project", async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gita-db-"));
-    const database = openGitaDatabase(tmpDir);
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gg-db-"));
+    const database = openGGDatabase(tmpDir);
     try {
       const project = await createProject(database, { name: "Fixture" });
       const view = await createBranchView(database, project.id, {
@@ -133,8 +133,8 @@ describe("analytics queries", () => {
   });
 
   it("scopes commit metrics to included and excluded repository folders", async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gita-db-"));
-    const database = openGitaDatabase(tmpDir);
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gg-db-"));
+    const database = openGGDatabase(tmpDir);
     try {
       const project = await createProject(database, { name: "Fixture" });
       const repository = await createRepositoryRecord(database, project.id, {

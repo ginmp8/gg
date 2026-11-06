@@ -1,0 +1,62 @@
+name: Refresh GG Analytics screenshots
+
+on:
+  push:
+    branches: [development]
+    paths:
+      - "apps/**"
+      - "packages/**"
+      - "scripts/gg-screenshots.mjs"
+      - "assets/gg-desktop-icon.svg"
+      - ".github/workflows/screenshots.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gg-analytics-screenshots-development
+  cancel-in-progress: true
+
+jobs:
+  capture:
+    # Generated-only commits do not match the paths filter. Never push from pull requests.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GG_OFFLINE: "1"
+      GG_DATA_DIR: ${{ runner.temp }}/gg-analytics-screenshots-data
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - name: Check out development
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Chromium for reproducible screenshots
+        run: npx playwright install --with-deps chromium
+      - name: Run the app and capture its actual UI
+        shell: bash
+        run: |
+          npm run dev > "$RUNNER_TEMP/gg-analytics-dev.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          node scripts/gg-screenshots.mjs || {
+            tail -n 120 "$RUNNER_TEMP/gg-analytics-dev.log"
+            exit 1
+          }
+      - name: Commit refreshed screenshots to development only
+        shell: bash
+        run: |
+          if git diff --quiet -- assets/app.png assets/contributors.png assets/files.png; then
+            echo "Screenshots are unchanged."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- assets/app.png assets/contributors.png assets/files.png
+          git commit -m "docs: update GG Analytics screenshots [screenshots]"
+          git push origin HEAD:development

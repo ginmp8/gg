@@ -1,6 +1,6 @@
 "use client";
 
-import type { AnnualMonthly } from "@gita/core";
+import type { AnnualMonthly } from "@gg/core";
 import * as echarts from "echarts";
 import { useEffect, useMemo, useRef, useState } from "react";
 

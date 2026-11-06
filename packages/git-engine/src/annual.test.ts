@@ -26,7 +26,7 @@ describe("annual Git diff metrics", () => {
   });
 
   it("separates substantive diffs, whitespace changes, and pure renames", async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gita-annual-git-"));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gg-annual-git-"));
     try {
       execFileSync("git", ["init", "--initial-branch=main", root], { stdio: "ignore" });
       fs.mkdirSync(path.join(root, "src"));
@@ -65,7 +65,7 @@ describe("annual Git diff metrics", () => {
   });
 
   it("refuses shallow clones rather than reporting a full annual history", async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gita-annual-shallow-"));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gg-annual-shallow-"));
     const original = path.join(root, "original");
     const shallow = path.join(root, "shallow");
     fs.mkdirSync(original);

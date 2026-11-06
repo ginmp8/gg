@@ -1,9 +1,9 @@
 import type {
   AnnualCommitMetrics, AnnualCoverage, AnnualContributor, AnnualIdentityLink,
   AnnualMonthly, AnnualReport, AnnualTotals
-} from "@gita/core";
+} from "@gg/core";
 
-import type { GitaDatabase } from "./client";
+import type { GGDatabase } from "./client";
 import { getAnnualEvidence } from "./ice";
 
 const VERSION = 1;
@@ -46,14 +46,14 @@ function addMetrics(target: AnnualTotals, row: MetricsDbRow): void {
   for (const [key, column] of METRICS) target[key] += row[column];
 }
 
-export function annualCachedHashes(database: GitaDatabase, repoId: string): Set<string> {
+export function annualCachedHashes(database: GGDatabase, repoId: string): Set<string> {
   const rows = database.sqlite.prepare(
     "SELECT hash FROM annual_commit_metrics WHERE repo_id = ? AND analysis_version = ?"
   ).all(repoId, VERSION) as Array<{ hash: string }>;
   return new Set(rows.map((row) => row.hash));
 }
 
-export function saveAnnualBatch(database: GitaDatabase, repoId: string, items: AnnualCommitMetrics[]): void {
+export function saveAnnualBatch(database: GGDatabase, repoId: string, items: AnnualCommitMetrics[]): void {
   if (!items.length) return;
   const columns = [
     "repo_id", "hash", "analysis_version", "author_email", "author_name", "author_date",
@@ -100,7 +100,7 @@ export function saveAnnualBatch(database: GitaDatabase, repoId: string, items: A
 }
 
 export function publishAnnualReference(
-  database: GitaDatabase, repoId: string, ref: string, head: string, hashes: string[]
+  database: GGDatabase, repoId: string, ref: string, head: string, hashes: string[]
 ): void {
   const count = database.sqlite.prepare(
     "SELECT COUNT(*) AS count FROM annual_commit_metrics WHERE repo_id = ? " +
@@ -129,7 +129,7 @@ export function publishAnnualReference(
   })();
 }
 
-export function listAnnualIdentities(database: GitaDatabase, projectId: string): AnnualIdentityLink[] {
+export function listAnnualIdentities(database: GGDatabase, projectId: string): AnnualIdentityLink[] {
   const rows = database.sqlite.prepare(
     "SELECT email,canonical_email AS canonicalEmail,github_login AS githubLogin " +
     "FROM annual_identity_links WHERE project_id = ? ORDER BY email"
@@ -138,7 +138,7 @@ export function listAnnualIdentities(database: GitaDatabase, projectId: string):
 }
 
 export function upsertAnnualIdentity(
-  database: GitaDatabase, projectId: string, link: AnnualIdentityLink
+  database: GGDatabase, projectId: string, link: AnnualIdentityLink
 ): void {
   database.sqlite.prepare(
     "INSERT INTO annual_identity_links (project_id,email,canonical_email,github_login) VALUES (?,?,?,?) " +
@@ -160,7 +160,7 @@ export interface CollaborationSnapshot {
 }
 
 export function saveAnnualCollaboration(
-  database: GitaDatabase, repoId: string, snapshot: CollaborationSnapshot
+  database: GGDatabase, repoId: string, snapshot: CollaborationSnapshot
 ): void {
   const clearPRs = database.sqlite.prepare("DELETE FROM annual_pull_requests WHERE repo_id = ?");
   const clearReviews = database.sqlite.prepare("DELETE FROM annual_pr_reviews WHERE repo_id = ?");
@@ -212,7 +212,7 @@ function safePercent(numerator: number, denominator: number): number | null {
  * remote or an API. Missing snapshots are null, never misleading zeroes.
  */
 export function getAnnualReport(
-  database: GitaDatabase, projectId: string, year: number, selectedRepoId?: string
+  database: GGDatabase, projectId: string, year: number, selectedRepoId?: string
 ): AnnualReport {
   if (!Number.isInteger(year) || year < 1970 || year > 2100) {
     throw new Error("Invalid analytics year.");

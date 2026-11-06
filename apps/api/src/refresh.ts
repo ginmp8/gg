@@ -1,8 +1,8 @@
 import { performance } from "node:perf_hooks";
 
-import { createGitHubAdapter } from "@gita/github-adapter";
+import { createGitHubAdapter } from "@gg/github-adapter";
 import { indexAnnualRepository } from "./annual";
-import { analyzeRepository, ensureMirrorRepository, GitCommandError } from "@gita/git-engine";
+import { analyzeRepository, ensureMirrorRepository, GitCommandError } from "@gg/git-engine";
 import {
   createRefreshRun,
   getRefreshRun,
@@ -11,22 +11,22 @@ import {
   replacePullRequests,
   storeRepositoryAnalysis,
   updateRefreshRun,
-  type GitaDatabase
-} from "@gita/db";
+  type GGDatabase
+} from "@gg/db";
 
-export function enqueueRepositoryRefresh(database: GitaDatabase, runId: string, repoId: string): void {
+export function enqueueRepositoryRefresh(database: GGDatabase, runId: string, repoId: string): void {
   setTimeout(() => {
     void refreshRepositoryRun(database, runId, repoId);
   }, 0);
 }
 
-export function enqueueProjectRefresh(database: GitaDatabase, runId: string, projectId: string): void {
+export function enqueueProjectRefresh(database: GGDatabase, runId: string, projectId: string): void {
   setTimeout(() => {
     void refreshProjectRun(database, runId, projectId);
   }, 0);
 }
 
-async function refreshProjectRun(database: GitaDatabase, runId: string, projectId: string): Promise<void> {
+async function refreshProjectRun(database: GGDatabase, runId: string, projectId: string): Promise<void> {
   const repos = await listRepositories(database, projectId);
   await updateRefreshRun(database, runId, {
     status: "running",
@@ -87,7 +87,7 @@ interface RepositoryRefreshProgress {
 }
 
 async function refreshRepositoryRun(
-  database: GitaDatabase,
+  database: GGDatabase,
   runId: string,
   repoId: string,
   onProgress?: (progress: RepositoryRefreshProgress) => Promise<void>

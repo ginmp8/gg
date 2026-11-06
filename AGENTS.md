@@ -2,7 +2,7 @@
 
 This file is the binding implementation specification for agents and
 developers working on this repository. It defines the product, architecture,
-technology choices, safety rules, and quality bar for the `gita` project.
+technology choices, safety rules, and quality bar for the `gg-analytics` project.
 
 Developers must not re-select the stack, replace the architecture, or downgrade
 the product scope without an explicit user request. When this file gives a
@@ -11,7 +11,7 @@ choice directly.
 
 ## Project Mission
 
-`gita` is a local-first git analytics application.
+`gg` is a local-first git analytics application.
 
 The user can create projects, attach one or more git repositories to each
 project, refresh repository data on demand or on a schedule, and inspect a
@@ -71,7 +71,7 @@ the backend/worker layer.
 
 These rules are non-negotiable.
 
-- Never run `git push` against repositories analyzed by Gita or their remotes.
+- Never run `git push` against repositories analyzed by GG or their remotes.
 - Never create, delete, rename, or update branches in analyzed repositories.
 - Never create commits, tags, worktrees, stashes, or checkouts in analyzed
   repositories.
@@ -79,10 +79,10 @@ These rules are non-negotiable.
   `git checkout`, `git switch`, or `git branch -D` against user repositories.
 - Do not write into user repositories being analyzed.
 - All mutable git state owned by the app must live under the app cache,
-  `.gita/repos/`.
+  `.gg/repos/`.
 - Use bare mirror clones for repository caches.
 - Use read-only commands against repository caches except for app-owned
-  `git fetch --prune` updates inside `.gita/repos/`.
+  `git fetch --prune` updates inside `.gg/repos/`.
 - Treat `gh` as read-only. Use it only for API reads such as pull requests,
   reviews, repository metadata, and branch metadata.
 - If a later feature needs write access, it must be explicitly approved by the
@@ -113,7 +113,7 @@ Be explicit about what git can and cannot know.
 Build this as an npm workspace with clear boundaries.
 
 ```text
-gita/
+gg/
   package.json
   AGENTS.md
   .gitignore
@@ -133,8 +133,8 @@ gita/
       src/
     github-adapter/
       src/
-  .gita/
-    gita.sqlite
+  .gg/
+    gg.sqlite
     repos/
     logs/
     exports/
@@ -224,11 +224,11 @@ Rules:
 
 ## Local Data Layout
 
-The app must own all mutable data under `.gita/`.
+The app must own all mutable data under `.gg/`.
 
 ```text
-.gita/
-  gita.sqlite
+.gg/
+  gg.sqlite
   repos/
     <repo-id>.git
   logs/
@@ -238,7 +238,7 @@ The app must own all mutable data under `.gita/`.
 
 Rules:
 
-- `.gita/` must not be committed.
+- `.gg/` must not be committed.
 - Repository cache directories are app-owned.
 - A cached repository is updated with `git fetch --prune`.
 - The app database is the source of truth for projects, repository records,
@@ -741,9 +741,9 @@ The root `package.json` must expose these exact scripts:
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",
-    "db:generate": "npm --workspace @gita/db run generate",
-    "db:migrate": "npm --workspace @gita/db run migrate",
-    "db:studio": "npm --workspace @gita/db run studio"
+    "db:generate": "npm --workspace @gg/db run generate",
+    "db:migrate": "npm --workspace @gg/db run migrate",
+    "db:studio": "npm --workspace @gg/db run studio"
   }
 }
 ```
@@ -772,7 +772,7 @@ contract and must remain stable.
 - Do not pass untrusted strings through a shell.
 - Use child process argument arrays.
 - Restrict local path access to explicit user-provided repository paths and the
-  app-owned `.gita/` directory.
+  app-owned `.gg/` directory.
 - Do not expose the local API beyond localhost by default.
 - Do not log secrets, tokens, or full authenticated remote URLs.
 - Redact tokens from command output.

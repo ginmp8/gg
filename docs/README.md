@@ -1,4 +1,4 @@
-# Gita documentation
+# GG documentation
 
 Documentation is written in English. Version 0.2.0 is a development candidate, not a published release.
 
@@ -12,7 +12,7 @@ Documentation is written in English. Version 0.2.0 is a development candidate, n
 ## Analysis and evidence
 
 - [Annual engineering contribution](ANNUAL-ANALYTICS.md)
-- [ICE-Git/1 and Gita-Throughput/1 methodology](ICE-GIT.md)
+- [ICE-Git/1 and GG-Throughput/1 methodology](ICE-GIT.md)
 - [Side-by-side contributor comparison](features/contributor-comparison.md)
 - [Multi-repository branches and PRs](features/multi-repository-inventories.md)
 
@@ -23,3 +23,5 @@ Documentation is written in English. Version 0.2.0 is a development candidate, n
 - [GitHub discovery](GITHUB-DISCOVERY.md)
 - [Network and privacy](NETWORK-PRIVACY.md), [security hardening](SECURITY-HARDENING.md)
 - [Desktop](DESKTOP.md), [build and release](RELEASING-DESKTOP.md) and [desktop release notes](DESKTOP-RELEASE.md)
+
+- [Brand identity and compatibility](BRANDING.md)

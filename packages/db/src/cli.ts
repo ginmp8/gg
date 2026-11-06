@@ -1,7 +1,7 @@
-import type { AnalyticsFilters, TagTargetType } from "@gita/core";
-import { analyticsFiltersSchema } from "@gita/core";
+import type { AnalyticsFilters, TagTargetType } from "@gg/core";
+import { analyticsFiltersSchema } from "@gg/core";
 
-import type { GitaDatabase } from "./client";
+import type { GGDatabase } from "./client";
 import { getAnnualReport, listAnnualIdentities } from "./annual";
 import {
   getContributorFileTypes, getContributorLeaderboard, getFileTypeAnalytics, getHotFiles,
@@ -57,7 +57,7 @@ const DESCRIPTIONS: Record<Command, string> = {
   branches: "Local branches, project-wide or --repo",
   "pull-requests": "Cached GitHub PRs, project-wide or --repo",
   annual: "Full annual contribution report, monthly metrics and score evidence",
-  scores: "ICE-Git/1 and Gita-Throughput/1 contributor scores",
+  scores: "ICE-Git/1 and GG-Throughput/1 contributor scores",
   tags: "Free-form tag definitions and assignments",
   "tag-targets": "Search taggable local entities",
   "branch-views": "Saved branch/folder view presets",
@@ -91,7 +91,7 @@ function date(raw: string | undefined, end: boolean): string | undefined {
   if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw + (end ? "T23:59:59.999Z" : "T00:00:00.000Z");
   return raw;
 }
-export function parseGitaCliArgs(argv: string[]): CliOptions {
+export function parseGGCliArgs(argv: string[]): CliOptions {
   const [word, ...rest] = argv;
   if (!COMMANDS.some(item => item === word)) {
     throw new Error("Unknown command: " + (word ?? "(none)") + ". Use 'catalog' or '--help'.");
@@ -129,9 +129,9 @@ export function parseGitaCliArgs(argv: string[]): CliOptions {
   }
   return { command: word as Command, values, lists };
 }
-export function gitaCliHelp(): string {
+export function ggCliHelp(): string {
   return [
-    "Gita local read-only data CLI (0.2.0)",
+    "GG local read-only data CLI (0.2.0)",
     "Usage: npm --silent run cli -- <command> [--option value]",
     "Commands: " + COMMANDS.join(", "),
     "Examples:",
@@ -141,10 +141,10 @@ export function gitaCliHelp(): string {
     "  npm --silent run cli -- table --table annual_file_changes --limit 100",
     "  npm --silent run cli -- catalog",
     "All successful queries print JSON to stdout. Errors print JSON to stderr.",
-    "Data source: existing GITA_DATA_DIR/gita.sqlite or .gita/gita.sqlite. No HTTP/auth/network."
+    "Data source: existing GG_DATA_DIR/gg.sqlite or .gg/gg.sqlite. No HTTP/auth/network."
   ].join("\n");
 }
-export function gitaCliCatalog(): unknown {
+export function ggCliCatalog(): unknown {
   return {
     commands: COMMANDS.map(name => ({ name, description: DESCRIPTIONS[name] })),
     rawTables: RAW_TABLES,
@@ -184,11 +184,11 @@ function filtersFrom(opts: CliOptions): AnalyticsFilters {
 function withEnvelope(command: string, data: unknown): CliResponse {
   return { schemaVersion: "1", source: "local-sqlite", readOnly: true, command, data };
 }
-export async function executeGitaCli(db: GitaDatabase, argv: string[]): Promise<CliResponse> {
-  const opts = parseGitaCliArgs(argv);
+export async function executeGGCli(db: GGDatabase, argv: string[]): Promise<CliResponse> {
+  const opts = parseGGCliArgs(argv);
   const v = opts.values;
   const { command } = opts;
-  if (command === "catalog") return withEnvelope(command,gitaCliCatalog());
+  if (command === "catalog") return withEnvelope(command,ggCliCatalog());
   if (command === "health") return withEnvelope(command,{
     available: true, databasePath: db.paths.databasePath, readOnly: true
   });

@@ -1,6 +1,6 @@
-import { openGitaDatabase } from "./client";
+import { openGGDatabase } from "./client";
 
-const database = openGitaDatabase();
+const database = openGGDatabase();
 database.sqlite.close();
 
-console.log("Gita database is ready.");
+console.log("GG database is ready.");

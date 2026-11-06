@@ -19,12 +19,12 @@ Examples using GitHub CLI:
 
 ```bash
 # Build the three installers without publishing a GitHub Release
-gh workflow run desktop.yml --repo ginmp8/gita --ref development -f publish=false
+gh workflow run desktop.yml --repo ginmp8/gg --ref development -f publish=false
 
 # Explicit release after approval and version/tag review
-# git tag -a v0.1.0 -m "Gita Desktop v0.1.0"
+# git tag -a v0.1.0 -m "GG Desktop v0.1.0"
 # git push origin v0.1.0
-gh workflow run desktop.yml --repo ginmp8/gita --ref v0.1.0 -f publish=true
+gh workflow run desktop.yml --repo ginmp8/gg --ref v0.1.0 -f publish=true
 ```
 
 Do not create a release tag until the build succeeds and the version is

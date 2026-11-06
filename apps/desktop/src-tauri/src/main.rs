@@ -65,10 +65,10 @@ fn main() {
                 .shell()
                 .sidecar("node")?
                 .arg(&server_script)
-                .env("GITA_ROOT", &resource_dir)
-                .env("GITA_DATA_DIR", &data_dir)
-                .env("GITA_API_PORT", port.to_string())
-                .env("GITA_DESKTOP_TOKEN", &token)
+                .env("GG_ROOT", &resource_dir)
+                .env("GG_DATA_DIR", &data_dir)
+                .env("GG_API_PORT", port.to_string())
+                .env("GG_DESKTOP_TOKEN", &token)
                 .set_process_group(true)
                 .kill_on_drop(true)
                 .spawn()?;
@@ -112,11 +112,11 @@ fn main() {
             }
             let origins_json = serde_json::to_string(&trusted_origins)?;
             let init_script = format!(
-                "if ({}.includes(window.location.origin)) {{ Object.defineProperty(window, '__GITA_DESKTOP__', {{ value: Object.freeze({}), writable: false, configurable: false }}); }}",
+                "if ({}.includes(window.location.origin)) {{ Object.defineProperty(window, '__GG_DESKTOP__', {{ value: Object.freeze({}), writable: false, configurable: false }}); }}",
                 origins_json, connection
             );
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
-                .title("Gita")
+                .title("GG Analytics")
                 .inner_size(1280.0, 820.0)
                 .min_inner_size(800.0, 600.0)
                 .initialization_script(init_script)
@@ -124,7 +124,7 @@ fn main() {
             Ok(())
         })
         .build(tauri::generate_context!())
-        .expect("Gita Desktop failed to initialize");
+        .expect("GG Analytics Desktop failed to initialize");
 
     app.run(|handle, event| {
         if let tauri::RunEvent::Exit = event {

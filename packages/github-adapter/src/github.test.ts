@@ -6,7 +6,7 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("github adapter degraded behavior", () => {
   it("does not invoke gh or query PR metadata when explicitly offline", async () => {
-    vi.stubEnv("GITA_OFFLINE", "1");
+    vi.stubEnv("GG_OFFLINE", "1");
     const runner = vi.fn(async () => {
       throw new Error("The GitHub CLI should not be executed while offline.");
     });
@@ -14,7 +14,7 @@ describe("github adapter degraded behavior", () => {
     const state = {
       available: false,
       reason: "network_disabled",
-      message: "GitHub metadata is disabled by GITA_OFFLINE=1 or GITA_ALLOW_GITHUB_METADATA=0."
+      message: "GitHub metadata is disabled by GG_OFFLINE=1 or GG_ALLOW_GITHUB_METADATA=0."
     };
 
     await expect(adapter.getStatus()).resolves.toEqual(state);
@@ -26,10 +26,10 @@ describe("github adapter degraded behavior", () => {
   });
 
   it("the offline kill-switch overrides GitHub metadata consent", async () => {
-    vi.stubEnv("GITA_ALLOW_GITHUB_METADATA", "1");
-    vi.stubEnv("GITA_OFFLINE", "1");
+    vi.stubEnv("GG_ALLOW_GITHUB_METADATA", "1");
+    vi.stubEnv("GG_OFFLINE", "1");
     const runner = vi.fn(async () => {
-      throw new Error("The CLI must not start when GITA_OFFLINE=1.");
+      throw new Error("The CLI must not start when GG_OFFLINE=1.");
     });
     const adapter = createGitHubAdapter(runner);
     await expect(adapter.getStatus()).resolves.toMatchObject({
@@ -39,7 +39,7 @@ describe("github adapter degraded behavior", () => {
     expect(runner).not.toHaveBeenCalled();
   });
   it("returns a degraded state when gh is missing", async () => {
-    vi.stubEnv("GITA_ALLOW_GITHUB_METADATA", "1");
+    vi.stubEnv("GG_ALLOW_GITHUB_METADATA", "1");
     const adapter = createGitHubAdapter(async () => {
       const error = new Error("spawn gh ENOENT");
       throw error;

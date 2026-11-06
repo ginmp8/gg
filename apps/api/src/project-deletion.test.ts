@@ -4,16 +4,16 @@ import path from "node:path";
 
 import {
   createProject, createRefreshRun, createRepositoryRecord, getProject,
-  openGitaDatabase
-} from "@gita/db";
+  openGGDatabase
+} from "@gg/db";
 import { describe, expect, it } from "vitest";
 
 import { buildServer } from "./server";
 
 describe("permanent project deletion", () => {
   it("requires exact confirmation, deletes owned mirrors, and preserves source repositories and other projects", async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gita-delete-project-"));
-    const db = openGitaDatabase(root);
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gg-delete-project-"));
+    const db = openGGDatabase(root);
     const server = await buildServer(db);
     try {
       const original = path.join(root, "user-owned-source");
@@ -80,8 +80,8 @@ describe("permanent project deletion", () => {
   });
 
   it("rejects forged cache paths without touching the outside directory", async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gita-delete-safety-"));
-    const db = openGitaDatabase(root);
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gg-delete-safety-"));
+    const db = openGGDatabase(root);
     const server = await buildServer(db);
     try {
       const outside = path.join(root, "outside-folder");
@@ -108,8 +108,8 @@ describe("permanent project deletion", () => {
   });
 
   it("refuses deletion while a refresh is pending", async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gita-delete-active-"));
-    const db = openGitaDatabase(root);
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gg-delete-active-"));
+    const db = openGGDatabase(root);
     const server = await buildServer(db);
     try {
       const project = await createProject(db, { name: "Active" });

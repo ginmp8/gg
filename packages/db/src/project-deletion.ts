@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-import type { GitaDatabase } from "./client";
+import type { GGDatabase } from "./client";
 
 export class ProjectDeletionConflict extends Error {
   constructor(message: string) {
@@ -33,7 +33,7 @@ function samePath(left: string, right: string): boolean {
 }
 
 function ownedMirror(
-  database: GitaDatabase,
+  database: GGDatabase,
   id: string,
   cachePath: string,
   projectId: string
@@ -41,7 +41,7 @@ function ownedMirror(
   const root = path.resolve(database.paths.reposDir);
   const expected = path.join(root, `${id}.git`);
   if (!/^[a-f0-9-]{36}$/i.test(id) || path.resolve(cachePath) !== expected) {
-    throw new ProjectDeletionConflict("The mirror path is not exclusively owned by Gita.");
+    throw new ProjectDeletionConflict("The mirror path is not exclusively owned by GG.");
   }
   const dataRoot = path.resolve(database.paths.dataDir);
   if (!samePath(fs.realpathSync(dataRoot), dataRoot) || !samePath(fs.realpathSync(root), root)) {
@@ -64,15 +64,15 @@ function ownedMirror(
 }
 
 /**
- * This removes only Gita-generated mirrors, plus the project's database rows.
+ * This removes only GG-generated mirrors, plus the project's database rows.
  * It never deletes the source path of a local repository or shared global data.
  *
- * The mirrors are renamed to a Gita-owned quarantine before the transaction:
+ * The mirrors are renamed to a GG-owned quarantine before the transaction:
  * a failed SQL deletion can restore them without touching the source repos.
  * A post-commit filesystem failure is reported, never silently hidden.
  */
 export function deleteProjectWithLocalData(
-  database: GitaDatabase,
+  database: GGDatabase,
   projectId: string,
   confirmName: string
 ): ProjectDeletionResult | null {
@@ -146,7 +146,7 @@ export function deleteProjectWithLocalData(
       deleted: true,
       removedMirrors: staged.length,
       cleanupComplete: false,
-      cleanupWarning: "Project deleted, but a Gita-owned quarantine remains under .gita/tmp."
+      cleanupWarning: "Project deleted, but a GG-owned quarantine remains under .gg/tmp."
     };
   }
 }

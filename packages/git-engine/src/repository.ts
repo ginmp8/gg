@@ -8,7 +8,7 @@ import type {
   CommitRecord,
   Provider,
   RepositoryFile
-} from "@gita/core";
+} from "@gg/core";
 
 import { applyLineCounts, parseGrepLineCounts, parseLsTreeFiles } from "./files";
 import { parseGitLog } from "./parser";
@@ -59,7 +59,7 @@ export function resolveRepositoryInput(
   }
 
   if (HTTPS_URL.test(trimmed) || SSH_URL.test(trimmed)) {
-    if (HTTPS_URL.test(trimmed) && process.env.GITA_ALLOW_URL_CREDENTIALS !== "1") {
+    if (HTTPS_URL.test(trimmed) && (process.env.GG_ALLOW_URL_CREDENTIALS ?? process.env.GITA_ALLOW_URL_CREDENTIALS) !== "1") {
       const remoteUrl = new URL(trimmed);
       const credentialQueryKeys = new Set([
         "token", "access_token", "auth", "authorization", "password",
@@ -70,7 +70,7 @@ export function resolveRepositoryInput(
       if (remoteUrl.username || remoteUrl.password || hasCredentialQuery) {
         throw new Error(
           "Repository URL contains embedded credentials. Use a Git credential helper, " +
-          "or explicitly opt in with GITA_ALLOW_URL_CREDENTIALS=1."
+          "or explicitly opt in with GG_ALLOW_URL_CREDENTIALS=1."
         );
       }
     }
@@ -108,7 +108,7 @@ export function assertAppOwnedCachePath(cachePath: string, reposRoot: string): v
     : `${resolvedRoot}${path.sep}`;
 
   if (resolvedCache !== resolvedRoot && !resolvedCache.startsWith(rootWithSeparator)) {
-    throw new Error("Repository cache path must be inside the app-owned .gita/repos directory.");
+    throw new Error("Repository cache path must be inside the app-owned .gg/repos directory.");
   }
 }
 
@@ -124,7 +124,7 @@ export async function ensureMirrorRepository(params: {
   if (isRemote && !isRemoteGitAllowed(process.env, params.userInitiated === true)) {
     throw new Error(
       "Remote Git access is disabled. Use an explicit Refresh action or " +
-      "set GITA_ALLOW_REMOTE_GIT=1; check GITA_OFFLINE=1 and GITA_ALLOW_REMOTE_GIT=0."
+      "set GG_ALLOW_REMOTE_GIT=1; check GG_OFFLINE=1 and GG_ALLOW_REMOTE_GIT=0."
     );
   }
   fs.mkdirSync(path.dirname(params.cachePath), { recursive: true });

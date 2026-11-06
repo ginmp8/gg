@@ -4,7 +4,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import type { Project } from "@gita/core";
+import type { Project } from "@gg/core";
 
 interface Props {
   project: Project | null;
@@ -33,7 +33,7 @@ export function ProjectDeleteDialog({
               <Dialog.Title className="text-lg font-semibold text-danger">Delete project permanently</Dialog.Title>
               <Dialog.Description className="text-sm text-muted-foreground">
                 This removes the project, its analysis data, repository records,
-                branch views and Gita-owned Git mirrors. Source repositories,
+                branch views and GG-owned Git mirrors. Source repositories,
                 including any local directories you added, will not be deleted.
                 This operation cannot be undone.
               </Dialog.Description>

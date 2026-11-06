@@ -4,14 +4,14 @@
 
 This module ports the annual Git analytics design and measurement principles
 from [ginmp8/git-insights-dashboard PR #1](https://github.com/ginmp8/git-insights-dashboard/pull/1)
-into Gita's TypeScript/Fastify/SQLite architecture. It does not embed Python
+into GG's TypeScript/Fastify/SQLite architecture. It does not embed Python
 or Streamlit, does not call a hosted analytics service, and provides experimental relative technical evidence scores. Neither score
 establishes objective human productivity.
 
 The **Annual contribution** tab is the default project view. The existing
 Overview, Contributors, Files, Branches and Pull requests tabs remain available.
 
-See [ICE-Git/1 and Gita-Throughput/1](ICE-GIT.md) for formulas, evidence
+See [ICE-Git/1 and GG-Throughput/1](ICE-GIT.md) for formulas, evidence
 and limitations.
 
 ## Scope and counting
@@ -54,7 +54,7 @@ reviews, CI outcomes, incidents and delivery impact.
 
 ## Incremental SQLite index
 
-The existing Gita database under `.gita/gita.sqlite` gains additive tables:
+The existing GG database under `.gg/gg.sqlite` gains additive tables:
 
 - `annual_commit_metrics`: versioned per-SHA measurements and authors
 - `annual_file_changes`: gross, rename-aware and adjusted per-file numstats
@@ -89,7 +89,7 @@ and backups as appropriate.
 
 GitHub PR/review snapshots are separate from Git-based metrics. They are
 downloaded only after an explicit click on **Fetch GitHub PRs and reviews
-(network)** (enabled by default; can be disabled with `GITA_ALLOW_GITHUB_METADATA=0`). The GitHub CLI must be
+(network)** (enabled by default; can be disabled with `GG_ALLOW_GITHUB_METADATA=0`). The GitHub CLI must be
 installed and authenticated. The operation is read-only and does not upload
 repository contents. It caches sanitized PR/review metadata locally.
 
@@ -122,7 +122,7 @@ filesystem cleanup failure is explicitly reported.
 ## Contribution and productivity evidence scores
 
 The annual dashboard now displays effective contribution (ICE-Git/1) and a
-separate productivity proxy (Gita-Throughput/1) from already cached per-SHA
+separate productivity proxy (GG-Throughput/1) from already cached per-SHA
 and per-file diffs. Both scores are cohort-relative, experimental, auditable
 and exported to CSV/JSON. The full annual metrics and other tabs remain.
 

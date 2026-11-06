@@ -5,7 +5,7 @@ import { useMutation } from "@tanstack/react-query";
 import { CloudDownload, Search, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import type { Repository } from "@gita/core";
+import type { Repository } from "@gg/core";
 import {
   bulkImportGitHubRepositories, discoverGitHubRepositories,
   type GitHubDiscoveredRepository
@@ -100,7 +100,7 @@ export function GitHubRepositoryPicker({
               {discovery.isPending ? "Querying GitHub..." : "Discover accessible repositories (network)"}
             </button>
             <p className="text-xs text-muted-foreground">
-              Requires gh auth login and GITA_ALLOW_GITHUB_METADATA=1.
+              Requires gh auth login and GG_ALLOW_GITHUB_METADATA=1.
               Private clone credentials may require gh auth setup-git.
             </p>
           </div>

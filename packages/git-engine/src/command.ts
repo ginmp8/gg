@@ -55,14 +55,14 @@ export async function runProcess(
   // Respect explicit offline/metadata-disable switches before starting it.
   if (command === "gh" && !isGitHubMetadataAllowed()) {
     throw new Error(
-      "GitHub metadata is disabled by GITA_OFFLINE=1 or GITA_ALLOW_GITHUB_METADATA=0."
+      "GitHub metadata is disabled by GG_OFFLINE=1 or GG_ALLOW_GITHUB_METADATA=0."
     );
   }
 
   const childEnv = { ...process.env };
   // A future packaged desktop may use a private API token. Neither Git nor
   // the GitHub CLI needs it, so do not leak it into child processes.
-  delete childEnv.GITA_DESKTOP_TOKEN;
+  delete childEnv.GG_DESKTOP_TOKEN;
   if (command === "git") {
     const remoteAllowed = options.allowRemoteGit === false
       ? false

@@ -1,8 +1,8 @@
-# Gita Desktop (Tauri 2)
+# GG Desktop (Tauri 2)
 
 ## Intent and architecture
 
-Gita remains a **local-first analytics application**. Desktop packaging is an
+GG remains a **local-first analytics application**. Desktop packaging is an
 optional delivery adapter, not a rewrite of Git analysis or SQLite:
 
 ```text
@@ -12,7 +12,7 @@ Tauri 2 native window (Rust, src-tauri)
         ├── Bundled Fastify API (esbuild)
         ├── Native better-sqlite3 driver (per-platform)
         ├── Git Engine (system git executable)
-        └── User AppData: gita.sqlite, Git mirrors and runtime files
+        └── User AppData: gg.sqlite, Git mirrors and runtime files
 ```
 
 The Rust host selects a free loopback port, generates 32 random bytes with
@@ -61,16 +61,16 @@ npm run lint
 npm run typecheck
 npm run test
 # Static Next.js export (keep normal server-side web build unchanged)
-GITA_DESKTOP=1 npm --workspace @gita/web run build
+GG_DESKTOP=1 npm --workspace @gg/web run build
 npm run desktop:prepare
 node scripts/desktop/smoke.mjs
 cd apps/desktop
-node ../../node_modules/@tauri-apps/cli/tauri.js icon ../../assets/gita-desktop-icon.svg
+node ../../node_modules/@tauri-apps/cli/tauri.js icon ../../assets/gg-desktop-icon.svg
 node ../../node_modules/@tauri-apps/cli/tauri.js build
 ```
 
-On PowerShell, set `$env:GITA_DESKTOP="1"` before the web build and
-`Remove-Item Env:GITA_DESKTOP` afterward. The `desktop:prepare` script
+On PowerShell, set `$env:GG_DESKTOP="1"` before the web build and
+`Remove-Item Env:GG_DESKTOP` afterward. The `desktop:prepare` script
 copies the Node executable and the native SQLite binding for the current
 host. Its generated resources and icons are Git-ignored.
 
@@ -89,7 +89,7 @@ required for repository analysis.
 ## Runtime data and compatibility
 
 - App-owned data is placed in the Tauri application data directory.
-  Existing browser `.gita/gita.sqlite` is **not** automatically moved.
+  Existing browser `.gg/gg.sqlite` is **not** automatically moved.
 - Remote repositories remain Git bare mirrors. Local-path and SSH/HTTPS
   sources work as before.
 - Version 0.2.0 adds a non-destructive local SQLite migration for custom tags. Back up local app data before upgrading.
@@ -105,7 +105,7 @@ required for repository analysis.
   adding an authentication and authorization layer.
 - Credentials should not be put into Git URLs. Use SSH agents or Git
   credential helpers. Tokens in URLs require the existing explicit
-  `GITA_ALLOW_URL_CREDENTIALS=1` compatibility opt-in.
+  `GG_ALLOW_URL_CREDENTIALS=1` compatibility opt-in.
 - The desktop HTML is self-hosted within Tauri. The CSP permits inline
   Next.js hydration scripts but disallows third-party frames and remote
   script sources; untrusted HTML must never be inserted without
@@ -137,6 +137,6 @@ required for repository analysis.
 
 The desktop packaging approach follows the small and isolated Tauri shell
 boundary used in PandaCode, without importing the agent system or rewriting
-Gita's established Node.js analytics engine. Primary implementation guides:
+GG's established Node.js analytics engine. Primary implementation guides:
 [Tauri sidecars](https://v2.tauri.app/develop/sidecar/),
 [Tauri Next.js static export](https://v2.tauri.app/start/frontend/nextjs/).

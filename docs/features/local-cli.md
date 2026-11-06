@@ -1,23 +1,23 @@
-# Local agent CLI (Gita 0.2.0)
+# Local agent CLI (GG 0.2.0)
 
-Gita exposes its existing SQLite analytics through a **read-only JSON CLI**
+GG exposes its existing SQLite analytics through a **read-only JSON CLI**
 that any trusted local harness can use as a subprocess. It does not start
 a network service, requires no authentication, and never writes data.
 
 ## Prerequisites
 
-Node.js 24 and dependencies installed with npm ci in a Gita source
+Node.js 24 and dependencies installed with npm ci in a GG source
 checkout. The CLI is not shipped as a global binary or inside native
 desktop installers. Open **Settings → Local CLI for coding agents** to
 see commands for the selected project and the local database path.
 
-The CLI reads only an existing gita.sqlite database. It does not
+The CLI reads only an existing gg.sqlite database. It does not
 create directories, run migrations, index commits, fetch Git remotes,
 contact GitHub, update tags or start a background worker.
 
 ## Examples
 
-From the Gita source checkout:
+From the GG source checkout:
 
     npm --silent run cli -- catalog
     npm --silent run cli -- projects
@@ -70,26 +70,26 @@ page contains items, total, limit and offset. Limit is bounded to
 queries intentionally span the whole local database; filter project IDs
 or repository IDs within your harness.
 
-The CLI obtains its database path from GITA_DATA_DIR/gita.sqlite when
-the GITA_DATA_DIR environment variable is set; otherwise it uses the
-Gita source workspace's .gita/gita.sqlite.
+The CLI obtains its database path from GG_DATA_DIR/gg.sqlite when
+the GG_DATA_DIR environment variable is set; otherwise it uses the
+GG source workspace's .gg/gg.sqlite.
 
 Linux/macOS:
 
-    GITA_DATA_DIR=/path/to/gita-data npm --silent run cli -- projects
+    GG_DATA_DIR=/path/to/gg-data npm --silent run cli -- projects
 
 Windows PowerShell:
 
-    $env:GITA_DATA_DIR = 'C:\path\to\gita-data'
+    $env:GG_DATA_DIR = 'C:\path\to\gg-data'
     npm --silent run cli -- projects
 
 ## Harness integration
 
-Configure the harness to run a subprocess with the Gita checkout as its
+Configure the harness to run a subprocess with the GG checkout as its
 working directory and capture stdout as JSON. Do not treat a nonzero exit
 as a successful query. The CLI needs no session token, local HTTP port or
 MCP server. A harness that supports **only** native MCP transport will
-need a separate MCP adapter; Gita 0.2.0 provides the command-line protocol.
+need a separate MCP adapter; GG 0.2.0 provides the command-line protocol.
 
 Because CLI output includes local Git history, author emails and other
 local metadata, run it only from trusted harnesses under your OS account.
@@ -97,5 +97,5 @@ Do not expose it to remote or untrusted executors. OS file permissions
 protect the underlying data; the CLI does not add authentication.
 
 For troubleshooting, run npm --silent run cli -- catalog (works without a database).
-Then run npm --silent run cli -- projects after the Gita app has created a local
-project. Point GITA_DATA_DIR to the correct folder if the DB is elsewhere.
+Then run npm --silent run cli -- projects after the GG app has created a local
+project. Point GG_DATA_DIR to the correct folder if the DB is elsewhere.

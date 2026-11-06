@@ -20,7 +20,7 @@ env:
   NEXT_TELEMETRY_DISABLED: '1'
 
 concurrency:
-  group: gita-desktop-${{ github.workflow }}-${{ github.ref }}
+  group: gg-desktop-${{ github.workflow }}-${{ github.ref }}
   # Only PR updates cancel obsolete desktop builds. Tags and explicitly
   # approved release jobs are never cancelled by newer commits.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -94,7 +94,7 @@ jobs:
           test "$(rustc -vV | sed -n 's/^host: //p')" = "$TARGET"
       - name: Build static Next.js desktop frontend
         shell: bash
-        run: GITA_DESKTOP=1 npm --workspace @gita/web run build
+        run: GG_DESKTOP=1 npm --workspace @gg/web run build
       - name: Package Node.js + Fastify + native SQLite
         run: npm run desktop:prepare
         env:
@@ -103,7 +103,7 @@ jobs:
         run: node scripts/desktop/smoke.mjs
       - name: Generate application icons from the checked-in SVG
         working-directory: apps/desktop
-        run: node ../../node_modules/@tauri-apps/cli/tauri.js icon ../../assets/gita-desktop-icon.svg
+        run: node ../../node_modules/@tauri-apps/cli/tauri.js icon ../../assets/gg-desktop-icon.svg
       - name: Build Tauri installer
         working-directory: apps/desktop
         env:
@@ -112,7 +112,7 @@ jobs:
         run: node ../../node_modules/@tauri-apps/cli/tauri.js build --bundles "$BUNDLES"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: gita-desktop-${{ matrix.artifact }}
+          name: gg-analytics-desktop-${{ matrix.artifact }}
           path: apps/desktop/src-tauri/target/release/bundle/
           if-no-files-found: error
           retention-days: 14
@@ -134,7 +134,7 @@ jobs:
           test "$GITHUB_REF_NAME" = "v$actual"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          pattern: gita-desktop-*
+          pattern: gg-analytics-desktop-*
           path: release-assets
           merge-multiple: false
       - name: Publish GitHub Release (never npm)
@@ -146,6 +146,6 @@ jobs:
           test "${#installers[@]}" -eq 3
           test -s "docs/DESKTOP-RELEASE.md"
           gh release create "$GITHUB_REF_NAME" "${installers[@]}" \
-            --title "Gita Desktop $GITHUB_REF_NAME" \
+            --title "GG Analytics Desktop $GITHUB_REF_NAME" \
             --notes-file docs/DESKTOP-RELEASE.md \
             --target "$GITHUB_SHA"

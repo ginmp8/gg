@@ -1,6 +1,6 @@
 "use client";
 
-import type { IceContributorScore, IceScoreReport } from "@gita/core";
+import type { IceContributorScore, IceScoreReport } from "@gg/core";
 import { useState } from "react";
 
 function show(value: number | null): string {

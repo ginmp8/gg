@@ -58,7 +58,7 @@ export function LocalCliSettings({ projectId }: { projectId: string }) {
           </select>
         </label>
         <div className="grid min-w-0 gap-1 text-xs">
-          <span>Command (run from your Gita source checkout)</span>
+          <span>Command (run from your GG source checkout)</span>
           <div className="flex min-w-0 items-stretch overflow-hidden rounded border border-border bg-background">
             <code className="min-w-0 flex-1 overflow-x-auto whitespace-nowrap p-3 text-[11px]" title={command}>{command}</code>
             <button type="button" aria-label="Copy CLI command" onClick={() => void copy()}
@@ -71,16 +71,16 @@ export function LocalCliSettings({ projectId }: { projectId: string }) {
       {copyError && <p role="status" className="text-xs text-warning">{copyError}</p>}
       <div className="grid gap-2 text-xs text-muted-foreground">
         <p><strong className="text-foreground">Prerequisites:</strong> Node.js 24 and npm ci
-          in the Gita source directory. Harnesses should run the command as a subprocess and parse stdout JSON.
+          in the GG source directory. Harnesses should run the command as a subprocess and parse stdout JSON.
           No dashboard session token is required.</p>
         <p><strong className="text-foreground">Local database:</strong>{" "}
           {health.isLoading ? "Checking local API…" : health.isError
-            ? "Unavailable. Ensure the Gita API is running." : (
+            ? "Unavailable. Ensure the GG API is running." : (
               <code className="break-all select-all text-foreground">{health.data?.databasePath}</code>
             )}</p>
         <p><strong className="text-foreground">Configuration:</strong> Set{" "}
-          <code className="text-foreground">GITA_DATA_DIR</code> in the harness process environment
-          when the CLI must read another Gita data directory, such as the desktop application's AppData.
+          <code className="text-foreground">GG_DATA_DIR</code> in the harness process environment
+          when the CLI must read another GG data directory, such as the desktop application's AppData.
           The CLI opens existing SQLite data strictly read-only; it never triggers remote Git refresh,
           indexing, migrations or background tasks.</p>
         <p>Use <code className="text-foreground">npm --silent run cli -- catalog</code> to discover

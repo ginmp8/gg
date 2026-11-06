@@ -1,4 +1,4 @@
-import type { AnnualContributor, AnnualReport } from "@gita/core";
+import type { AnnualContributor, AnnualReport } from "@gg/core";
 
 /** Prevent spreadsheet formula execution when Git author strings are exported. */
 export function csvCell(value: unknown): string {
@@ -44,7 +44,7 @@ export function annualCsv(report: AnnualReport): string {
   const scores = new Map(report.evidenceScores.contributors.map((row) => [row.email, row]));
   const header = [...FIELDS.map(([label]) => csvCell(label)),
     csvCell("Effective contribution score (ICE-Git/1)"),
-    csvCell("Productivity proxy (Gita-Throughput/1)"),
+    csvCell("Productivity proxy (GG-Throughput/1)"),
     csvCell("GitHub-enhanced contribution score"),
     csvCell("Evidence weight coverage (%)"),
     csvCell("Material commits"), csvCell("Bounded diff credit")].join(",");

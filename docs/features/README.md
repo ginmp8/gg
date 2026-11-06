@@ -1,4 +1,4 @@
-# Gita features
+# GG features
 
 All source code, UI messages and documentation are in English.
 
@@ -15,4 +15,4 @@ All source code, UI messages and documentation are in English.
 | Optional native desktop packaging | [Desktop](../DESKTOP.md) |
 | Local read-only agent/harness CLI with JSON output and raw dataset access | [Agent CLI](local-cli.md) |
 
-Gita never seeds roles, teams or other standard tag categories.
+GG never seeds roles, teams or other standard tag categories.

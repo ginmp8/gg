@@ -4,7 +4,7 @@
 
 ### Added
 - Full-history incremental annual engineering contribution and ICE-Git/1
-  evidence score with Gita-Throughput/1 technical productivity proxy.
+  evidence score with GG-Throughput/1 technical productivity proxy.
 - Selectable side-by-side comparison with no fixed contributor limit,
   including saved selection, select-all, annual fields, score components,
   twelve-month evidence and JSON export.
@@ -28,4 +28,4 @@ See [0.2.0 release candidate](releases/0.2.0.md).
 
 ## [0.1.0] — Initial baseline
 
-Original Gita source and Git analytics.
+Original GG source and Git analytics.

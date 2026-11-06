@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import type { AnnualChangeCategory, AnnualChangeRow, AnnualCommitMetrics } from "@gita/core";
+import type { AnnualChangeCategory, AnnualChangeRow, AnnualCommitMetrics } from "@gg/core";
 
 import { runGit } from "./command";
 import { parseGitLog } from "./parser";

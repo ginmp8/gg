@@ -1,4 +1,4 @@
-// Prevent Next.js CLI telemetry for Gita's local development and builds.
+// Prevent Next.js CLI telemetry for GG's local development and builds.
 // This wrapper is deliberately cross-platform and does not change npm
 // dependencies or Next.js application behavior.
 import { spawn } from "node:child_process";

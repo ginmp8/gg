@@ -1,6 +1,6 @@
 "use client";
 
-import type { AnnualContributor } from "@gita/core";
+import type { AnnualContributor } from "@gg/core";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Download, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -31,7 +31,7 @@ function metric(label: string, value: number, subtext?: string) {
 }
 
 function csvName(year: number): string {
-  return `gita-annual-contribution-${year}`;
+  return `gg-annual-contribution-${year}`;
 }
 
 export function AnnualAnalytics({

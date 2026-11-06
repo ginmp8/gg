@@ -55,7 +55,7 @@ await fs.copyFile(process.execPath, executable);
 if (process.platform !== "win32") await fs.chmod(executable, 0o755);
 
 const packageJson = {
-  name: "gita-desktop-backend",
+  name: "gg-analytics-desktop-backend",
   private: true,
   type: "module",
   description: "Bundled Fastify API and native SQLite driver"

@@ -1,6 +1,6 @@
 "use client";
 
-import type { ProjectTag, TagTarget, TagTargetType } from "@gita/core";
+import type { ProjectTag, TagTarget, TagTargetType } from "@gg/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronDown, Pencil, Plus, Search, Tag, Trash2, X } from "lucide-react";
 import { useDeferredValue, useEffect, useRef, useState } from "react";
@@ -223,7 +223,7 @@ function TargetMultiSelect({
     <div ref={root} className="relative grid min-w-0 gap-1 text-xs">
       <span>Choose targets</span>
       <button type="button" disabled={disabled} aria-expanded={open}
-        aria-controls="gita-target-options" aria-haspopup="true"
+        aria-controls="gg-target-options" aria-haspopup="true"
         onClick={() => setOpen(previous => !previous)}
         className="flex h-10 w-full items-center justify-between gap-2 rounded border border-border bg-background px-3 text-left text-sm hover:bg-muted disabled:opacity-60">
         <span className={selected.length ? "font-medium" : "text-muted-foreground"}>
@@ -232,7 +232,7 @@ function TargetMultiSelect({
         <ChevronDown className="h-4 w-4 shrink-0" aria-hidden />
       </button>
       {open && !disabled && (
-        <div id="gita-target-options" className="absolute left-0 right-0 top-14 z-30 overflow-hidden rounded-md border border-border bg-panel shadow-xl">
+        <div id="gg-target-options" className="absolute left-0 right-0 top-14 z-30 overflow-hidden rounded-md border border-border bg-panel shadow-xl">
           <div className="flex items-center gap-2 border-b border-border px-3">
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
             <input ref={input} value={search} maxLength={100}

@@ -9,7 +9,7 @@ function item(email: string, material: number, diff: number, months = 6, commits
   };
 }
 
-describe("ICE-Git/1 and Gita-Throughput/1", () => {
+describe("ICE-Git/1 and GG-Throughput/1", () => {
   it("does not reward high-volume cosmetic or generated-only contributions", () => {
     const cohort = [item("cosmetic@test.com", 0, 0, 12, 8000),
       item("a@test.com", 100, 80), item("b@test.com", 80, 65),

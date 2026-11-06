@@ -4,10 +4,10 @@ import os from "node:os";
 import path from "node:path";
 
 import {
-  createProject, createRepositoryRecord, getAnnualReport, openGitaDatabase,
+  createProject, createRepositoryRecord, getAnnualReport, openGGDatabase,
   saveAnnualCollaboration, storeRepositoryAnalysis, upsertAnnualIdentity
-} from "@gita/db";
-import { analyzeRepository, ensureMirrorRepository } from "@gita/git-engine";
+} from "@gg/db";
+import { analyzeRepository, ensureMirrorRepository } from "@gg/git-engine";
 import { describe, expect, it } from "vitest";
 
 import { indexAnnualRepository } from "./annual";
@@ -29,11 +29,11 @@ function commit(root: string, name: string, message: string): string {
 
 describe("full-year SQLite annual contribution index", () => {
   it("indexes all reachable SHAs, reuses metrics, and reconciles force-updated references", async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gita-annual-index-"));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gg-annual-index-"));
     const original = path.join(root, "original");
     fs.mkdirSync(original);
     execFileSync("git", ["init", "--initial-branch=main", original], { stdio: "ignore" });
-    const database = openGitaDatabase(root);
+    const database = openGGDatabase(root);
     try {
       const project = await createProject(database, { name: "Annual fixture" });
       const repo = await createRepositoryRecord(database, project.id, {
@@ -113,11 +113,11 @@ describe("full-year SQLite annual contribution index", () => {
   }, 30_000);
 
   it("scores material authors and generated-only changes from persisted file diffs", async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gita-evidence-"));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gg-evidence-"));
     const original = path.join(root, "original");
     fs.mkdirSync(original);
     execFileSync("git", ["init", "--initial-branch=main", original], { stdio: "ignore" });
-    const database = openGitaDatabase(root);
+    const database = openGGDatabase(root);
     try {
       const project = await createProject(database, { name: "Evidence fixture" });
       const repo = await createRepositoryRecord(database, project.id, {
@@ -153,7 +153,7 @@ describe("full-year SQLite annual contribution index", () => {
     }
   }, 30_000);
   it("indexes over 500 commits without truncation and reuses every cached SHA", async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gita-annual-over-500-"));
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gg-annual-over-500-"));
     const original = path.join(root, "original");
     fs.mkdirSync(original);
     execFileSync("git", ["init", "--initial-branch=main", original], { stdio:"ignore" });
@@ -170,7 +170,7 @@ describe("full-year SQLite annual contribution index", () => {
     }
     execFileSync("git", ["-C", original, "fast-import", "--quiet"],
       { input:stream.join("\n")+"\n", encoding:"utf8" });
-    const db = openGitaDatabase(root);
+    const db = openGGDatabase(root);
     try {
       const project = await createProject(db, { name:"Large annual history" });
       const repo = await createRepositoryRecord(db,project.id,{

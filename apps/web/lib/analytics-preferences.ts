@@ -1,4 +1,4 @@
-/** Local browser preferences: never sent to GitHub or shared between Gita installations. */
+/** Local browser preferences: never sent to GitHub or shared between GG installations. */
 export interface ComparisonPreferences {
   year: number;
   tagId: string;
@@ -10,8 +10,8 @@ export interface DashboardScopePreference {
   repositoryId: string;
   metric: string;
 }
-const COMPARISON_KEY = "gita.compareContributors.v1";
-const DASHBOARD_SCOPE_KEY = "gita.dashboardScope.v1";
+const COMPARISON_KEY = "gg.compareContributors.v1";
+const DASHBOARD_SCOPE_KEY = "gg.dashboardScope.v1";
 
 export function currentYearToDate(now: Date): { from: string; to: string } {
   const format = (value: Date) =>
@@ -27,7 +27,9 @@ function object(value: unknown): Record<string, unknown> | null {
 function fromLocalStorage(key: string): unknown {
   if (typeof window === "undefined") return null;
   try {
-    const raw = window.localStorage.getItem(key);
+    // Carry forward the user's choices from before the GG Analytics rename.
+    const legacyKey = key.replace(/^gg\./, "gita.");
+    const raw = window.localStorage.getItem(key) ?? window.localStorage.getItem(legacyKey);
     return raw ? JSON.parse(raw) as unknown : null;
   } catch { return null; }
 }

@@ -1,4 +1,4 @@
-import type { BranchComparison } from "@gita/core";
+import type { BranchComparison } from "@gg/core";
 
 import { runGit } from "./command";
 

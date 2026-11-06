@@ -6,7 +6,7 @@ import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3"
 
 import * as schema from "./schema";
 
-export interface GitaPaths {
+export interface GGPaths {
   rootDir: string;
   dataDir: string;
   databasePath: string;
@@ -16,10 +16,10 @@ export interface GitaPaths {
   tmpDir: string;
 }
 
-export interface GitaDatabase {
+export interface GGDatabase {
   sqlite: BetterSqlite3.Database;
   db: BetterSQLite3Database<typeof schema>;
-  paths: GitaPaths;
+  paths: GGPaths;
 }
 
 export function findWorkspaceRoot(startDir = process.cwd()): string {
@@ -38,18 +38,26 @@ export function findWorkspaceRoot(startDir = process.cwd()): string {
   return path.resolve(startDir);
 }
 
-export function resolveGitaPaths(startDir = process.cwd()): GitaPaths {
-  const rootDir = process.env.GITA_ROOT
-    ? path.resolve(process.env.GITA_ROOT)
-    : findWorkspaceRoot(startDir);
-  const dataDir = process.env.GITA_DATA_DIR
-    ? path.resolve(process.env.GITA_DATA_DIR)
-    : path.join(rootDir, ".gita");
+export function resolveGGPaths(startDir = process.cwd()): GGPaths {
+  // Prefer the new brand, but retain a read-only discovery fallback for
+  // existing installations. Never move or delete a populated data directory.
+  const selectedRoot = process.env.GG_ROOT ?? process.env.GITA_ROOT;
+  const rootDir = selectedRoot ? path.resolve(selectedRoot) : findWorkspaceRoot(startDir);
+  const explicitDataDir = process.env.GG_DATA_DIR ?? process.env.GITA_DATA_DIR;
+  const modernDataDir = explicitDataDir ? path.resolve(explicitDataDir) : path.join(rootDir, ".gg");
+  const historicalDataDir = path.join(rootDir, ".gita");
+  const useHistoricalDirectory = !explicitDataDir &&
+    !fs.existsSync(path.join(modernDataDir, "gg.sqlite")) &&
+    fs.existsSync(path.join(historicalDataDir, "gita.sqlite"));
+  const dataDir = useHistoricalDirectory ? historicalDataDir : modernDataDir;
+  const oldDatabase = path.join(dataDir, "gita.sqlite");
+  const databasePath = !fs.existsSync(path.join(dataDir, "gg.sqlite")) &&
+    fs.existsSync(oldDatabase) ? oldDatabase : path.join(dataDir, "gg.sqlite");
 
   return {
     rootDir,
     dataDir,
-    databasePath: path.join(dataDir, "gita.sqlite"),
+    databasePath,
     reposDir: path.join(dataDir, "repos"),
     logsDir: path.join(dataDir, "logs"),
     exportsDir: path.join(dataDir, "exports"),
@@ -57,9 +65,9 @@ export function resolveGitaPaths(startDir = process.cwd()): GitaPaths {
   };
 }
 
-export function openGitaDatabase(startDir = process.cwd()): GitaDatabase {
-  const paths = resolveGitaPaths(startDir);
-  ensureGitaDirectories(paths);
+export function openGGDatabase(startDir = process.cwd()): GGDatabase {
+  const paths = resolveGGPaths(startDir);
+  ensureGGDirectories(paths);
 
   const sqlite = new BetterSqlite3(paths.databasePath);
   sqlite.pragma("journal_mode = WAL");
@@ -74,19 +82,19 @@ export function openGitaDatabase(startDir = process.cwd()): GitaDatabase {
   };
 }
 
-/** Opens an existing Gita database for local harnesses without schema migration or write capability. */
-export function openGitaDatabaseReadOnly(startDir = process.cwd()): GitaDatabase {
-  const paths = resolveGitaPaths(startDir);
+/** Opens an existing GG database for local harnesses without schema migration or write capability. */
+export function openGGDatabaseReadOnly(startDir = process.cwd()): GGDatabase {
+  const paths = resolveGGPaths(startDir);
   if (!fs.existsSync(paths.databasePath)) {
-    throw new Error("No existing Gita database at " + paths.databasePath +
-      ". Create a project and refresh it using Gita first.");
+    throw new Error("No existing GG database at " + paths.databasePath +
+      ". Create a project and refresh it using GG first.");
   }
   const sqlite = new BetterSqlite3(paths.databasePath, { readonly: true, fileMustExist: true });
   sqlite.pragma("query_only = ON");
   return { sqlite, db: drizzle(sqlite, { schema }), paths };
 }
 
-export function ensureGitaDirectories(paths: GitaPaths): void {
+export function ensureGGDirectories(paths: GGPaths): void {
   fs.mkdirSync(paths.dataDir, { recursive: true });
   fs.mkdirSync(paths.reposDir, { recursive: true });
   fs.mkdirSync(paths.logsDir, { recursive: true });

@@ -24,21 +24,21 @@ import type {
   RepositoryFolderFilter,
   Repository,
   RepositoryComparisonRow
-} from "@gita/core";
+} from "@gg/core";
 
-const API_URL = process.env.NEXT_PUBLIC_GITA_API_URL ?? "http://127.0.0.1:4443";
+const API_URL = process.env.NEXT_PUBLIC_GG_API_URL ?? process.env.NEXT_PUBLIC_GITA_API_URL ?? "http://127.0.0.1:4443";
 
 // Injected at document start by the trusted native Tauri window only.
 // The normal browser/self-hosted workflow does not receive a session token.
 declare global {
   interface Window {
-    __GITA_DESKTOP__?: Readonly<{ apiBase: string; token: string }>;
+    __GG_DESKTOP__?: Readonly<{ apiBase: string; token: string }>;
   }
 }
 
 function backendConnection(): { apiBase: string; token?: string } {
-  if (typeof window !== "undefined" && window.__GITA_DESKTOP__) {
-    return window.__GITA_DESKTOP__;
+  if (typeof window !== "undefined" && window.__GG_DESKTOP__) {
+    return window.__GG_DESKTOP__;
   }
   return { apiBase: API_URL };
 }

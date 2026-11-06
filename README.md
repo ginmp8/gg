@@ -1,6 +1,6 @@
 <div align="center">
 
-# Gita
+# GG Analytics
 
 **A local-first dashboard for understanding activity, contributors, and change across Git repositories.**
 
@@ -12,9 +12,9 @@
 
 </div>
 
-![Gita project analytics dashboard](assets/app.png)
+![GG project analytics dashboard](assets/app.png)
 
-Gita turns Git history into a clear engineering analytics dashboard. Group
+GG turns Git history into a clear engineering analytics dashboard. Group
 repositories into projects, refresh their data on demand, and explore the
 people and files behind every change—all from a local web application.
 
@@ -24,7 +24,7 @@ and [feature catalog](docs/features/README.md).
 
 ## One dashboard for the whole project
 
-Gita is not limited to a single repository. You can manage multiple independent
+GG is not limited to a single repository. You can manage multiple independent
 projects, attach multiple repositories to each one, and see their Git history
 as one coherent product view.
 
@@ -39,11 +39,11 @@ as one coherent product view.
 ## Understand every contributor
 
 See who is driving activity across the project, compare commits and line-change
-metrics, and understand which file types each contributor works with. Gita
+metrics, and understand which file types each contributor works with. GG
 normalizes Git identities so project-wide leaderboards remain useful even when
 the work is split across several repositories.
 
-![Gita contributor analytics and file type share](assets/contributors.png)
+![GG contributor analytics and file type share](assets/contributors.png)
 
 ## Find where change concentrates
 
@@ -51,7 +51,7 @@ Explore the current file landscape alongside historical change. File-type
 breakdowns, touched-file counts, and churn metrics make it easier to spot the
 technologies and parts of a project that absorb the most work.
 
-![Gita file type analytics and churn breakdown](assets/files.png)
+![GG file type analytics and churn breakdown](assets/files.png)
 
 ## What you can explore
 
@@ -69,19 +69,19 @@ technologies and parts of a project that absorb the most work.
 - Composable filters for repository, contributor, branch, folder, date, and
   metric
 
-Gita is local-first and read-only toward analyzed repositories. Its database,
-mirror caches, logs, and exports stay inside `.gita/` in the application
+GG is local-first and read-only toward analyzed repositories. Its database,
+mirror caches, logs, and exports stay inside `.gg/` in the application
 directory.
 
 ## Engineering analytics — complete annual contribution
 
 The annual view includes **ICE-Git/1 effective contribution** and a separate
-**Gita-Throughput/1 technical productivity proxy**, both relative experimental
+**GG-Throughput/1 technical productivity proxy**, both relative experimental
 0–100 indicators calculated from cached Git diff evidence (not objective
 measurements of human performance). See [methodology](docs/ICE-GIT.md).
 
 
-The **Annual contribution** tab is the first view in every Gita project.
+The **Annual contribution** tab is the first view in every GG project.
 It incorporates the complete-history, incremental annual measurement approach
 from [Git Insights Dashboard 0.3.0](https://github.com/ginmp8/git-insights-dashboard/pull/1).
 
@@ -112,7 +112,7 @@ Select **Light**, **Dark**, or **System** in **Settings → Appearance**. The
 preference is stored locally in your browser and includes chart colors.
 
 A project's **Delete project and local data** control asks you to type the
-project name before permanent deletion. The operation removes Gita-owned
+project name before permanent deletion. The operation removes GG-owned
 SQLite project data, associated annual analytics and cached bare Git mirrors.
 It never deletes your original local source repositories or any Git remote.
 The application refuses deletion while a refresh is running or if a mirror
@@ -124,7 +124,7 @@ you want to keep.
 On first launch without stored preferences, the dashboard uses **Year to date**,
 from January 1 of the current local year through today. Project, repository,
 metric and date filters persist locally across tabs and app restarts. The
-rolling year-to-date preset updates its end date when Gita is reopened on a
+rolling year-to-date preset updates its end date when GG is reopened on a
 later day; an explicitly saved custom/all-time range is preserved.
 
 The Compare tab persists the last selected contributors, year, tag and search
@@ -139,7 +139,7 @@ semantics and caching.
 
 ## Local CLI for agent harnesses
 
-Gita exposes its cached analytics through a local **read-only JSON CLI**
+GG exposes its cached analytics through a local **read-only JSON CLI**
 for any trusted coding harness able to execute a subprocess. It does not
 require an HTTP API server, authentication, network access or a separate
 MCP installation.
@@ -154,7 +154,7 @@ The CLI includes project summaries, full annual scores and score components,
 contributor and repository analytics, branch/PR inventories, tags, and
 paginated raw Git/SQLite records. See
 [CLI documentation](docs/features/local-cli.md) or **Settings** for
-the current project command examples and database directory. A Gita source
+the current project command examples and database directory. A GG source
 checkout with Node.js 24 and npm ci is required; the native desktop
 installer does not bundle this CLI.
 
@@ -170,7 +170,8 @@ installer does not bundle this CLI.
 Clone or download the repository, then run:
 
 ```bash
-cd gita
+git clone https://github.com/ginmp8/gita.git gg-analytics
+cd gg-analytics
 npm ci
 npm run dev
 ```
@@ -179,14 +180,16 @@ Open [http://127.0.0.1:4444](http://127.0.0.1:4444) in your browser. The local
 API runs at [http://127.0.0.1:4443](http://127.0.0.1:4443).
 
 The database and required runtime directories are created automatically on
-first start.
+first start under `.gg/`. Existing `.gita/gita.sqlite` installations are
+detected automatically and continue using their existing data; no implicit
+migration or deletion occurs. Refer to [branding and compatibility](docs/BRANDING.md).
 
 ### GitHub CLI discovery and bulk registration
 
 The **GitHub import** button in the dashboard header can list repositories you
 can access with the already authenticated `gh` CLI. Listing is **explicit**,
 never a side effect of opening the UI; it requires
-read-only GitHub metadata access enabled by default (`GITA_ALLOW_GITHUB_METADATA=0` disables it). The picker filters by owner, visibility,
+read-only GitHub metadata access enabled by default (`GG_ALLOW_GITHUB_METADATA=0` disables it). The picker filters by owner, visibility,
 archived status and name, and can register up to **25 repositories** per
 click. Listing and registration store metadata only. Click **Refresh
 project** to clone their Git mirrors into the local app cache.
@@ -218,8 +221,8 @@ independently opt-in. See [Network and privacy](docs/NETWORK-PRIVACY.md).
 
 ## How it works
 
-Gita never checks out or modifies the repositories it analyzes. Remote
-repositories are cloned as bare mirrors into the app-owned `.gita/repos/`
+GG never checks out or modifies the repositories it analyzes. Remote
+repositories are cloned as bare mirrors into the app-owned `.gg/repos/`
 cache; later refreshes update only those caches with `git fetch --prune`.
 Provider metadata is read through the local `gh` CLI.
 
@@ -262,19 +265,19 @@ files do not contribute line counts.
 
 ## Network and privacy
 
-Gita analyzes source code and commit history locally. Merely opening the
+GG analyzes source code and commit history locally. Merely opening the
 dashboard does not contact Git remotes. Clicking **Refresh project** or
 **Refresh repository** authorizes clone/fetch operations against the remote
-URLs already registered in Gita. No extra environment variable is needed.
+URLs already registered in GG. No extra environment variable is needed.
 
 The app reads from remote Git servers; it does not `git push` or upload
 project files to an analytics service. GitHub PR metadata queries through
 `gh` remain a separate optional integration.
 
-To force a fully offline refresh, set `GITA_OFFLINE=1` before starting Gita.
-An explicit `GITA_ALLOW_REMOTE_GIT=0` also disables remote Git refreshes.
+To force a fully offline refresh, set `GG_OFFLINE=1` before starting GG.
+An explicit `GG_ALLOW_REMOTE_GIT=0` also disables remote Git refreshes.
 To opt into noninteractive/background Git operations in future integrations,
-`GITA_ALLOW_REMOTE_GIT=1` is supported. The offline switch always wins.
+`GG_ALLOW_REMOTE_GIT=1` is supported. The offline switch always wins.
 
 Next.js CLI telemetry is disabled in the project's npm scripts. The local
 Fastify API is not exposed on the Internet.
@@ -297,24 +300,24 @@ desktop does not migrate SQLite or change the original analytics engine.
 
 ## Security and self-hosting
 
-Gita is **local-first**. The API binds to `127.0.0.1:4443` by default and has
+GG is **local-first**. The API binds to `127.0.0.1:4443` by default and has
 **no user authentication**. Do not publish the API directly or expose it
 through an unauthenticated reverse proxy. Shared installations require an
 authentication and TLS boundary.
 
 HTTP `Host` validation also limits access to loopback hostnames by default,
 reducing DNS rebinding exposure. Explicit reverse-proxy hostnames can be
-added with `GITA_ALLOWED_API_HOSTS` (comma-separated). This is not
+added with `GG_ALLOWED_API_HOSTS` (comma-separated). This is not
 authentication and does not itself enable network listening.
 
 Browser CORS access is restricted to `http://127.0.0.1:4444` and
 `http://localhost:4444`. Operators may add extra *exact* origins through
-`GITA_ALLOWED_WEB_ORIGINS` (comma-separated). CORS is **not** authorization.
+`GG_ALLOWED_WEB_ORIGINS` (comma-separated). CORS is **not** authorization.
 
 HTTPS Git URLs containing userinfo or common token query parameters are
 rejected by default to avoid plaintext credential storage in SQLite and Git
 mirror configuration. Prefer a Git credential helper. To explicitly retain
-the original behavior, set `GITA_ALLOW_URL_CREDENTIALS=1`, accepting the
+the original behavior, set `GG_ALLOW_URL_CREDENTIALS=1`, accepting the
 credential-storage risk.
 
 See [Security hardening](docs/SECURITY-HARDENING.md) for the verified
@@ -322,7 +325,7 @@ source scope, dependency updates, controls and remaining risks.
 
 ## License
 
-Gita is available under the [MIT License](LICENSE). You may use, copy, fork,
+GG Analytics is available under the [MIT License](LICENSE). You may use, copy, fork,
 modify, and distribute it, including for commercial purposes, as long as the
 copyright and license notice remain included. The software is provided **as
 is**, without warranty; its authors are not liable for how it is used.

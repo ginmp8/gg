@@ -4,16 +4,16 @@ import { performance } from "node:perf_hooks";
 import {
   ANNUAL_GIT_BATCH_SIZE, analyzeAnnualBatch, isGitHubMetadataAllowed,
   readAnnualReference, runGit, runProcess
-} from "@gita/git-engine";
+} from "@gg/git-engine";
 import {
   annualCachedHashes, listRepositories, publishAnnualReference, saveAnnualBatch,
-  saveAnnualCollaboration, updateRefreshRun, type CollaborationSnapshot, type GitaDatabase
-} from "@gita/db";
-import type { AnnualIndexResult, Repository } from "@gita/core";
+  saveAnnualCollaboration, updateRefreshRun, type CollaborationSnapshot, type GGDatabase
+} from "@gg/db";
+import type { AnnualIndexResult, Repository } from "@gg/core";
 
-/** Git-only read of the existing Gita-owned mirror. Never contacts remotes. */
+/** Git-only read of the existing GG-owned mirror. Never contacts remotes. */
 export async function indexAnnualRepository(
-  database: GitaDatabase, repo: Repository
+  database: GGDatabase, repo: Repository
 ): Promise<AnnualIndexResult> {
   const started = performance.now();
   const reference = await readAnnualReference(repo.cachePath, repo.defaultBranch);
@@ -88,11 +88,11 @@ const GRAPHQL = `query($owner:String!, $repo:String!, $cursor:String) {
  * Per-PR review pagination is capped and the coverage flag exposes gaps.
  */
 export async function syncAnnualGitHubCollaboration(
-  database: GitaDatabase,
+  database: GGDatabase,
   repo: Repository & { githubOwnerRepo: string | null }
 ): Promise<{ repoId: string; received: number; complete: boolean }> {
   if (!isGitHubMetadataAllowed()) {
-    throw new Error("GitHub metadata is disabled by GITA_OFFLINE=1 or GITA_ALLOW_GITHUB_METADATA=0.");
+    throw new Error("GitHub metadata is disabled by GG_OFFLINE=1 or GG_ALLOW_GITHUB_METADATA=0.");
   }
   const id = repo.githubOwnerRepo;
   if (!id || !/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(id)) {
@@ -146,13 +146,13 @@ export async function syncAnnualGitHubCollaboration(
 
 /** Explicit local reindex without fetching anything from the network. */
 export function enqueueAnnualProjectIndex(
-  database: GitaDatabase, runId: string, projectId: string
+  database: GGDatabase, runId: string, projectId: string
 ): void {
   setTimeout(() => { void runAnnualProjectIndex(database, runId, projectId); }, 0);
 }
 
 async function runAnnualProjectIndex(
-  database: GitaDatabase, runId: string, projectId: string
+  database: GGDatabase, runId: string, projectId: string
 ): Promise<void> {
   try {
     const repos = await listRepositories(database, projectId);

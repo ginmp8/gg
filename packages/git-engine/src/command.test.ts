@@ -13,29 +13,29 @@ describe("network egress controls", () => {
     expect(isRemoteGitAllowed()).toBe(false);
     expect(isRemoteGitAllowed(process.env, true)).toBe(true);
     expect(isGitHubMetadataAllowed({})).toBe(true);
-    vi.stubEnv("GITA_ALLOW_REMOTE_GIT", "true");
-    vi.stubEnv("GITA_ALLOW_GITHUB_METADATA", "yes");
+    vi.stubEnv("GG_ALLOW_REMOTE_GIT", "true");
+    vi.stubEnv("GG_ALLOW_GITHUB_METADATA", "yes");
     expect(isRemoteGitAllowed()).toBe(false);
     expect(isGitHubMetadataAllowed()).toBe(true);
-    vi.stubEnv("GITA_ALLOW_GITHUB_METADATA", "0");
+    vi.stubEnv("GG_ALLOW_GITHUB_METADATA", "0");
     expect(isGitHubMetadataAllowed()).toBe(false);
-    vi.stubEnv("GITA_ALLOW_REMOTE_GIT", "1");
-    vi.stubEnv("GITA_ALLOW_GITHUB_METADATA", "1");
+    vi.stubEnv("GG_ALLOW_REMOTE_GIT", "1");
+    vi.stubEnv("GG_ALLOW_GITHUB_METADATA", "1");
     expect(isRemoteGitAllowed()).toBe(true);
     expect(isGitHubMetadataAllowed()).toBe(true);
-    vi.stubEnv("GITA_OFFLINE", "1");
+    vi.stubEnv("GG_OFFLINE", "1");
     expect(isRemoteGitAllowed()).toBe(false);
     expect(isRemoteGitAllowed(process.env, true)).toBe(false);
     expect(isGitHubMetadataAllowed()).toBe(false);
-    vi.stubEnv("GITA_OFFLINE", "0");
-    vi.stubEnv("GITA_ALLOW_REMOTE_GIT", "0");
+    vi.stubEnv("GG_OFFLINE", "0");
+    vi.stubEnv("GG_ALLOW_REMOTE_GIT", "0");
     expect(isRemoteGitAllowed(process.env, true)).toBe(false);
   });
 
   it("does not start GitHub CLI when explicitly disabled", async () => {
-    vi.stubEnv("GITA_ALLOW_GITHUB_METADATA", "0");
+    vi.stubEnv("GG_ALLOW_GITHUB_METADATA", "0");
     await expect(runProcess("gh", ["auth", "status"])).rejects.toThrow(
-      /GITA_ALLOW_GITHUB_METADATA=0/
+      /GG_ALLOW_GITHUB_METADATA=0/
     );
   });
 
@@ -63,7 +63,7 @@ describe("network egress controls", () => {
   });
 
   it("the offline override denies network transports even with per-refresh consent", async () => {
-    vi.stubEnv("GITA_OFFLINE", "1");
+    vi.stubEnv("GG_OFFLINE", "1");
     await expect(runGit(["ls-remote", "https://example.invalid/private.git"], {
       timeoutMs: 5_000,
       allowRemoteGit: true
@@ -73,10 +73,10 @@ describe("network egress controls", () => {
   });
 
   it("never forwards a future desktop API token to a child process", async () => {
-    vi.stubEnv("GITA_DESKTOP_TOKEN", "a".repeat(64));
+    vi.stubEnv("GG_DESKTOP_TOKEN", "a".repeat(64));
     const result = await runProcess(process.execPath, [
       "-e",
-      "process.stdout.write(process.env.GITA_DESKTOP_TOKEN ?? 'not-inherited')"
+      "process.stdout.write(process.env.GG_DESKTOP_TOKEN ?? 'not-inherited')"
     ]);
     expect(result.stdout).toBe("not-inherited");
   });

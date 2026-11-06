@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-import { createProject, listRepositories, openGitaDatabase } from "@gita/db";
+import { createProject, listRepositories, openGGDatabase } from "@gg/db";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { buildServer } from "./server";
@@ -41,11 +41,11 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("GitHub discovery and guarded batch registration", () => {
   it("never queries GitHub unless metadata access is explicitly enabled", async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gita-discovery-offline-"));
-    const db = openGitaDatabase(root);
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gg-discovery-offline-"));
+    const db = openGGDatabase(root);
     const server = await buildServer(db);
     try {
-      vi.stubEnv("GITA_ALLOW_GITHUB_METADATA", "0");
+      vi.stubEnv("GG_ALLOW_GITHUB_METADATA", "0");
       const response = await server.inject({
         method: "POST", url: "/api/github/discover",
         payload: { limit: 100 }
@@ -60,8 +60,8 @@ describe("GitHub discovery and guarded batch registration", () => {
   });
 
   it("registers 25 at most, avoids duplicates, and never clones until Refresh", async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gita-discovery-bulk-"));
-    const db = openGitaDatabase(root);
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gg-discovery-bulk-"));
+    const db = openGGDatabase(root);
     const server = await buildServer(db);
     try {
       const project = await createProject(db, { name: "My GitHub projects" });

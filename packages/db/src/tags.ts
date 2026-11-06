@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
-import type { ProjectTag, TagAssignment, TagTargetPage, TagTargetType, TagsSnapshot } from "@gita/core";
-import type { GitaDatabase } from "./client";
+import type { ProjectTag, TagAssignment, TagTargetPage, TagTargetType, TagsSnapshot } from "@gg/core";
+import type { GGDatabase } from "./client";
 
 export class TagTargetNotFound extends Error {
   constructor() { super("Tag target does not exist in this project."); }
 }
-export function listProjectTags(db: GitaDatabase, projectId: string): TagsSnapshot {
+export function listProjectTags(db: GGDatabase, projectId: string): TagsSnapshot {
   const items = db.sqlite.prepare(
     "SELECT id,project_id AS projectId,name,group_name AS 'group',created_at AS createdAt," +
     "updated_at AS updatedAt FROM project_tags WHERE project_id=? " +
@@ -18,7 +18,7 @@ export function listProjectTags(db: GitaDatabase, projectId: string): TagsSnapsh
   return { items, assignments };
 }
 export function createProjectTag(
-  db: GitaDatabase, projectId: string, input: { name: string; group: string }
+  db: GGDatabase, projectId: string, input: { name: string; group: string }
 ): ProjectTag {
   const now = new Date().toISOString();
   const tag = { id: randomUUID(), projectId, name: input.name.trim(), group: input.group.trim(),
@@ -29,7 +29,7 @@ export function createProjectTag(
   return tag;
 }
 export function updateProjectTag(
-  db: GitaDatabase, projectId: string, tagId: string, input: { name: string; group: string }
+  db: GGDatabase, projectId: string, tagId: string, input: { name: string; group: string }
 ): ProjectTag | null {
   const now = new Date().toISOString();
   if (!db.sqlite.prepare(
@@ -40,11 +40,11 @@ export function updateProjectTag(
     "created_at AS createdAt,updated_at AS updatedAt FROM project_tags WHERE id=?"
   ).get(tagId) as ProjectTag;
 }
-export function deleteProjectTag(db: GitaDatabase, projectId: string, tagId: string): boolean {
+export function deleteProjectTag(db: GGDatabase, projectId: string, tagId: string): boolean {
   return db.sqlite.prepare("DELETE FROM project_tags WHERE project_id=? AND id=?")
     .run(projectId, tagId).changes > 0;
 }
-function validateTarget(db: GitaDatabase, projectId: string, type: TagTargetType, key: string): boolean {
+function validateTarget(db: GGDatabase, projectId: string, type: TagTargetType, key: string): boolean {
   const lookup: Record<TagTargetType, string> = {
     contributor: "SELECT 1 FROM (" +
       "SELECT lower(COALESCE(a.canonical_email,c.author_email)) AS email " +
@@ -75,7 +75,7 @@ function validateTarget(db: GitaDatabase, projectId: string, type: TagTargetType
 }
 /** Set/unset a tag with project isolation and real-target validation. */
 export function setProjectTagAssignment(
-  db: GitaDatabase, projectId: string, tagId: string, type: TagTargetType, key: string, enabled: boolean
+  db: GGDatabase, projectId: string, tagId: string, type: TagTargetType, key: string, enabled: boolean
 ): boolean {
   const targetKey = type === "contributor" ? key.trim().toLowerCase() : key.trim();
   const tag = db.sqlite.prepare("SELECT 1 FROM project_tags WHERE project_id=? AND id=?")
@@ -119,7 +119,7 @@ function targetSql(type: TagTargetType): string {
   }
 }
 export function listProjectTagTargets(
-  db: GitaDatabase, projectId: string, type: TagTargetType, search = "", limit = 100
+  db: GGDatabase, projectId: string, type: TagTargetType, search = "", limit = 100
 ): TagTargetPage {
   const needle = "%" + search.trim().toLowerCase().replace(/[\\%_]/g, c => "\\" + c) + "%";
   const sub = " FROM (" + targetSql(type) + ") AS targets WHERE " +

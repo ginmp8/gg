@@ -13,7 +13,7 @@ export default tseslint.config(
       "**/.next-dev/**",
       ".turbo/**",
       "**/.turbo/**",
-      ".gita/**",
+      ".gg/**",
       "coverage/**",
       "dist/**",
       "**/dist/**",

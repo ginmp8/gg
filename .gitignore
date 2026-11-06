@@ -14,8 +14,8 @@ test-results/
 !.env.example
 !.env.*.example
 
-.gita/
-!.gita/.gitkeep
+.gg/
+!.gg/.gitkeep
 
 # Tauri desktop build products. The source SVG is tracked; generated icons are not.
 apps/web/out/
@@ -24,3 +24,6 @@ apps/desktop/src-tauri/api-dist/
 apps/desktop/src-tauri/binaries/
 apps/desktop/src-tauri/icons/
 apps/desktop/src-tauri/gen/
+
+# Ignore pre-rebrand local databases to protect existing workspace data.
+.gita/

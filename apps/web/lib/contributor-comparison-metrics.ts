@@ -1,6 +1,6 @@
 import type {
   AnnualContributor, AnnualMonthly, IceComponents, IceContributorScore
-} from "@gita/core";
+} from "@gg/core";
 
 export type CompareRow = {
   person: AnnualContributor;
@@ -53,7 +53,7 @@ export const COMPARISON_METRIC_GROUPS: readonly ComparisonGroup[] = [
     metrics: [
       score("effectiveContributionScore", "Effective contribution · ICE-Git/1",
         "Relative contribution evidence score, not an objective human-performance metric."),
-      score("productivityProxyScore", "Productivity proxy · Gita-Throughput/1",
+      score("productivityProxyScore", "Productivity proxy · GG-Throughput/1",
         "Technical output evidence normalized by active-month reference values."),
       score("combinedContributionScore", "GitHub-enhanced contribution",
         "Combined score only when collaboration evidence can be mapped."),

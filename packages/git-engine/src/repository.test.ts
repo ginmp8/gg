@@ -12,21 +12,21 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("repository analysis", () => {
   it("rejects remote repository refresh before creating a mirror by default", async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gita-offline-"));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gg-offline-"));
     try {
       const mirror = path.join(tmpDir, "private.git");
       await expect(ensureMirrorRepository({
         fetchUrl: "https://example.invalid/private.git",
         cachePath: mirror,
         reposRoot: tmpDir
-      })).rejects.toThrow(/GITA_ALLOW_REMOTE_GIT=1/);
+      })).rejects.toThrow(/GG_ALLOW_REMOTE_GIT=1/);
       expect(fs.existsSync(mirror)).toBe(false);
     } finally {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
   });
   it("allows an explicitly requested remote refresh and uses the registered source on repeat fetch", async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gita-remote-consent-"));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gg-remote-consent-"));
     const sourcePath = path.join(tmpDir, "source.git");
     const cachePath = path.join(tmpDir, "mirror.git");
     const params = {
@@ -57,9 +57,9 @@ describe("repository analysis", () => {
   });
 
   it("the explicit offline switch blocks even a requested remote refresh", async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gita-forced-offline-"));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gg-forced-offline-"));
     try {
-      vi.stubEnv("GITA_OFFLINE", "1");
+      vi.stubEnv("GG_OFFLINE", "1");
       const cachePath = path.join(tmpDir, "mirror.git");
       await expect(ensureMirrorRepository({
         fetchUrl: "https://example.invalid/private.git",
@@ -69,8 +69,8 @@ describe("repository analysis", () => {
       })).rejects.toThrow(/Remote Git access is disabled/);
       expect(fs.existsSync(cachePath)).toBe(false);
 
-      vi.stubEnv("GITA_OFFLINE", "0");
-      vi.stubEnv("GITA_ALLOW_REMOTE_GIT", "0");
+      vi.stubEnv("GG_OFFLINE", "0");
+      vi.stubEnv("GG_ALLOW_REMOTE_GIT", "0");
       await expect(ensureMirrorRepository({
         fetchUrl: "https://example.invalid/private.git",
         cachePath,
@@ -83,8 +83,8 @@ describe("repository analysis", () => {
   });
 
   it("rejects embedded HTTPS credentials unless deliberately enabled", () => {
-    const previous = process.env.GITA_ALLOW_URL_CREDENTIALS;
-    delete process.env.GITA_ALLOW_URL_CREDENTIALS;
+    const previous = process.env.GG_ALLOW_URL_CREDENTIALS;
+    delete process.env.GG_ALLOW_URL_CREDENTIALS;
     try {
       expect(() => resolveRepositoryInput("https://user:sample-pass@example.test/org/repo.git"))
         .toThrow(/embedded credentials/);
@@ -92,17 +92,17 @@ describe("repository analysis", () => {
         .toThrow(/embedded credentials/);
       expect(resolveRepositoryInput("https://example.test/org/repo.git").fetchUrl)
         .toBe("https://example.test/org/repo.git");
-      process.env.GITA_ALLOW_URL_CREDENTIALS = "1";
+      process.env.GG_ALLOW_URL_CREDENTIALS = "1";
       expect(resolveRepositoryInput("https://user:sample-pass@example.test/org/repo.git").fetchUrl)
         .toContain("sample-pass");
     } finally {
-      if (previous === undefined) delete process.env.GITA_ALLOW_URL_CREDENTIALS;
-      else process.env.GITA_ALLOW_URL_CREDENTIALS = previous;
+      if (previous === undefined) delete process.env.GG_ALLOW_URL_CREDENTIALS;
+      else process.env.GG_ALLOW_URL_CREDENTIALS = previous;
     }
   });
 
   it("rejects an existing mirror whose origin was changed to an HTTP remote", async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gita-cache-egress-"));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gg-cache-egress-"));
     try {
       const sourcePath = path.join(tmpDir, "source.git");
       const cachePath = path.join(tmpDir, "mirror.git");
@@ -120,7 +120,7 @@ describe("repository analysis", () => {
   });
 
   it("analyzes commits from all branches while keeping file inventory on the analysis branch", async () => {
-    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gita-git-engine-"));
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "gg-git-engine-"));
     try {
       const sourcePath = path.join(tmpDir, "source");
       const cachePath = path.join(tmpDir, "cache.git");

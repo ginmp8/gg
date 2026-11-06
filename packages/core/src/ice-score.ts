@@ -1,7 +1,7 @@
-/** ICE-Git/1 and Gita-Throughput/1: relative, auditable Git evidence, not measured human productivity. */
+/** ICE-Git/1 and GG-Throughput/1: relative, auditable Git evidence, not measured human productivity. */
 export const ICE_GIT_POLICY = {
   methodology: "ICE-Git/1",
-  productivityMethodology: "Gita-Throughput/1",
+  productivityMethodology: "GG-Throughput/1",
   referenceQuantile: 0.75,
   minimumCohort: 3,
   maxLinesPerFile: 120,
@@ -62,7 +62,7 @@ export type IceScoreStatus = "ok" | "insufficient_cohort" | "incomplete_history"
 
 export interface IceScoreReport {
   methodology: "ICE-Git/1";
-  productivityMethodology: "Gita-Throughput/1";
+  productivityMethodology: "GG-Throughput/1";
   status: IceScoreStatus;
   policy: typeof ICE_GIT_POLICY;
   references: {

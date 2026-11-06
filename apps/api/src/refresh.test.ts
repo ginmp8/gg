@@ -11,8 +11,8 @@ import {
   getProjectSummary,
   getRefreshRun,
   listRepositories,
-  openGitaDatabase
-} from "@gita/db";
+  openGGDatabase
+} from "@gg/db";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { buildServer } from "./server";
@@ -33,11 +33,11 @@ afterEach(() => vi.unstubAllEnvs());
 
 describe("explicit project refresh network consent", () => {
   it("refreshes two registered remotes without global Git opt-in, including cached mirrors", async () => {
-    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gita-refresh-"));
-    vi.stubEnv("GITA_ALLOW_REMOTE_GIT", "");
-    vi.stubEnv("GITA_OFFLINE", "0");
-    vi.stubEnv("GITA_ALLOW_GITHUB_METADATA", "0");
-    const database = openGitaDatabase(root);
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "gg-refresh-"));
+    vi.stubEnv("GG_ALLOW_REMOTE_GIT", "");
+    vi.stubEnv("GG_OFFLINE", "0");
+    vi.stubEnv("GG_ALLOW_GITHUB_METADATA", "0");
+    const database = openGGDatabase(root);
     const server = await buildServer(database);
 
     try {
@@ -83,7 +83,7 @@ describe("explicit project refresh network consent", () => {
       expect((await getProjectSummary(database, project.id)).commits).toBe(2);
 
       // Even if a cached origin is tampered with, refresh uses the
-      // repository URL registered in Gita, not the cache's stale origin.
+      // repository URL registered in GG, not the cache's stale origin.
       const [repo] = await listRepositories(database, project.id);
       execFileSync("git", [
         "-C", repo.cachePath, "remote", "set-url", "origin",

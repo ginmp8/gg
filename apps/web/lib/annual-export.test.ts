@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { annualCsv, csvCell } from "./annual-export";
-import { scoreIceCohort, type AnnualReport } from "@gita/core";
+import { scoreIceCohort, type AnnualReport } from "@gg/core";
 
 describe("annual CSV export", () => {
   it("neutralizes spreadsheet formulas in commit author names and email fields", () => {
@@ -28,7 +28,7 @@ describe("annual CSV export", () => {
     const result = annualCsv(report);
     expect(result).toContain("Merged PRs (optional)");
     expect(result).toContain("Effective contribution score (ICE-Git/1)");
-    expect(result).toContain("Productivity proxy (Gita-Throughput/1)");
+    expect(result).toContain("Productivity proxy (GG-Throughput/1)");
     expect(result.split("\r\n").length).toBe(2);
   });
 });

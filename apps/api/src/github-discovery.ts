@@ -1,4 +1,4 @@
-import { isGitHubMetadataAllowed, runProcess } from "@gita/git-engine";
+import { isGitHubMetadataAllowed, runProcess } from "@gg/git-engine";
 
 export interface DiscoveredGitHubRepository {
   fullName: string;
@@ -56,7 +56,7 @@ export async function discoverGitHubRepositories(
   limit = 5000
 ): Promise<DiscoveredGitHubRepository[]> {
   if (!isGitHubMetadataAllowed()) {
-    throw new Error("GitHub metadata discovery is disabled. Set GITA_ALLOW_GITHUB_METADATA=1 to opt in.");
+    throw new Error("GitHub metadata discovery is disabled. Set GG_ALLOW_GITHUB_METADATA=1 to opt in.");
   }
   const endpoint = "user/repos?per_page=100&visibility=all&affiliation=owner%2Ccollaborator%2Corganization_member";
   const query = ".[] | [.full_name,.clone_url,.private,.archived,.pushed_at,.default_branch] | @json";

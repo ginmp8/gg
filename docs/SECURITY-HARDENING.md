@@ -2,7 +2,7 @@
 
 ## Scope and fork policy
 
-- Baseline: `ginmp8/gita:main`, commit `465d8b984c1e17e6a5763b60b527cfad5831973f`.
+- Baseline: `ginmp8/gg:main`, commit `465d8b984c1e17e6a5763b60b527cfad5831973f`.
 - Harden `development` only; preserve `main` and all existing features.
 - Prefer small compatible patches, new tests and explicit risky-behavior
   opt-ins. No automatic merge, tag, release or deployment.
@@ -21,14 +21,14 @@
    independent publicly committed npm lockfiles. Actual npm installation
    and audit must still be verified by CI.
 2. **CORS** — Trust only the local web application's default origins.
-   `GITA_ALLOWED_WEB_ORIGINS` is a comma-separated opt-in for additional
+   `GG_ALLOWED_WEB_ORIGINS` is a comma-separated opt-in for additional
    exact HTTP(S) origins; wildcard entries are rejected.
 3. **HTTP Host validation** — Reject requests bearing unexpected Host
    headers by default, reducing DNS rebinding exposure. Operators can opt
-   in to exact proxy hostnames with `GITA_ALLOWED_API_HOSTS`.
+   in to exact proxy hostnames with `GG_ALLOWED_API_HOSTS`.
 4. **Git credentials** — Reject HTTPS URLs with userinfo or common token
    query fields by default, preventing accidental cleartext persistence.
-   `GITA_ALLOW_URL_CREDENTIALS=1` explicitly restores the original
+   `GG_ALLOW_URL_CREDENTIALS=1` explicitly restores the original
    behavior; this is unsafe for shared installations.
 5. **Diagnostic redaction** — Redact credentials in subprocess argument
    diagnostics and unsuccessful stdout/stderr, without altering Git output
@@ -46,7 +46,7 @@
   deployment. A wider CORS allowlist alone does not provide these.
 - An explicit credential-URL opt-in can still store secrets in local
   SQLite and Git mirror configuration. Prefer credential helpers.
-- Gita intentionally supports arbitrary local Git paths and remote
+- GG intentionally supports arbitrary local Git paths and remote
   HTTPS/SSH sources. A hosted multi-user system needs per-user
   authorization and remote-target restrictions before exposure.
 - A complete review of transitive dependencies, large-repository
@@ -73,14 +73,14 @@ checks, weakening assertions, or silently updating unrelated packages.
 
 Git networking is limited to explicitly authorized operations:
 the user's **Refresh** action for registered remote URLs, or the
-`GITA_ALLOW_REMOTE_GIT=1` environment opt-in for non-UI consumers.
-`GITA_OFFLINE=1` and `GITA_ALLOW_REMOTE_GIT=0` deny a remote refresh
+`GG_ALLOW_REMOTE_GIT=1` environment opt-in for non-UI consumers.
+`GG_OFFLINE=1` and `GG_ALLOW_REMOTE_GIT=0` deny a remote refresh
 regardless of a click. Git subprocesses only allow file, HTTPS and SSH
 transports when authorized; local-source refreshes remain file-only.
-Cached mirror fetches use the URL stored by Gita, not a possibly altered
+Cached mirror fetches use the URL stored by GG, not a possibly altered
 origin. The GitHub adapter still requires independent
-read-only GitHub access (enabled by default; disabled by `GITA_OFFLINE=1` or
-`GITA_ALLOW_GITHUB_METADATA=0`) and does not contact GitHub during
+read-only GitHub access (enabled by default; disabled by `GG_OFFLINE=1` or
+`GG_ALLOW_GITHUB_METADATA=0`) and does not contact GitHub during
 local-only analysis.
 
 The Next.js CLI telemetry option remains disabled in the `dev` and
@@ -127,7 +127,7 @@ dependencies needed to address these findings:
 
 - Fastify `5.12.8` (existing major version).
 - Drizzle ORM `0.45.4`, Zod `4.6.7` and ECharts `6.1.0` (version
-  upgrades tested against Gita's existing application contracts).
+  upgrades tested against GG's existing application contracts).
 - Patched compatible transitive dependencies, including Git routing,
   `sharp`, `nanoid`, `fast-uri`, and source-map libraries.
 - Root-level npm overrides for `postcss: 8.5.32` and `zod: 4.6.7`,

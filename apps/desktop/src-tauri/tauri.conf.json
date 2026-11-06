@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Gita Desktop",
+  "productName": "GG Analytics",
   "version": "0.2.0",
-  "identifier": "dev.gita.desktop",
+  "identifier": "dev.gg.analytics",
   "build": {
     "devUrl": "http://127.0.0.1:4444",
     "frontendDist": "../../../apps/web/out"

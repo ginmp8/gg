@@ -29,6 +29,7 @@ import {
   X
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 
 import type {
   ActivityBucket,
@@ -45,7 +46,7 @@ import type {
   RepositoryFolderFilter,
   Repository,
   RepositoryComparisonRow
-} from "@gita/core";
+} from "@gg/core";
 
 import { ActivityChart } from "@/components/activity-chart";
 import { AnnualAnalytics } from "@/components/annual-analytics";
@@ -107,8 +108,8 @@ type BranchViewNameDialogState = {
 };
 
 const CUSTOM_BRANCH_VIEW_ID = "custom";
-const ACTIVE_BRANCH_VIEW_STORAGE_KEY = "gita.activeBranchViewByProject";
-const DATE_RANGE_STORAGE_KEY = "gita.dashboardDateRange";
+const ACTIVE_BRANCH_VIEW_STORAGE_KEY = "gg.activeBranchViewByProject";
+const DATE_RANGE_STORAGE_KEY = "gg.dashboardDateRange";
 
 function getStoredActiveBranchViewId(projectId: string): string | null {
   return readActiveBranchViewStorage()[projectId] ?? null;
@@ -138,7 +139,8 @@ function readActiveBranchViewStorage(): Record<string, string> {
   }
 
   try {
-    const rawValue = window.localStorage.getItem(ACTIVE_BRANCH_VIEW_STORAGE_KEY);
+    const rawValue = window.localStorage.getItem(ACTIVE_BRANCH_VIEW_STORAGE_KEY) ??
+      window.localStorage.getItem("gita.activeBranchViewByProject");
     if (!rawValue) {
       return {};
     }
@@ -718,11 +720,10 @@ export function Dashboard() {
         <div className="mx-auto flex max-w-[1500px] flex-col gap-4 px-4 py-4 lg:px-6">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-foreground text-background">
-                <BarChart3 className="h-5 w-5" />
-              </div>
+              <Image src="/gg-mark.svg" alt="" width={40} height={40}
+                className="h-10 w-10 shrink-0 rounded-md" />
               <div className="min-w-0">
-                <h1 className="truncate text-xl font-semibold">Gita</h1>
+                <h1 className="truncate text-xl font-semibold">GG Analytics</h1>
                 <p className="truncate text-sm text-muted-foreground">
                   {selectedProject?.name ?? "Local git analytics"}
                 </p>
@@ -1273,7 +1274,7 @@ export function Dashboard() {
               <section className="grid gap-3 rounded-md border border-border bg-panel p-4">
                 <h3 className="text-sm font-semibold">Workspace and repositories</h3>
                 <p className="text-xs text-muted-foreground">
-                  Import and refresh are explicit actions. Gita never pushes to the analyzed repositories.
+                  Import and refresh are explicit actions. GG never pushes to the analyzed repositories.
                 </p>
                 <div className="flex flex-wrap items-center gap-2">
               <GitHubRepositoryPicker
@@ -3101,7 +3102,8 @@ function readStoredDateRange(): StoredDateRange | null {
   }
 
   try {
-    const rawValue = window.localStorage.getItem(DATE_RANGE_STORAGE_KEY);
+    const rawValue = window.localStorage.getItem(DATE_RANGE_STORAGE_KEY) ??
+      window.localStorage.getItem("gita.dashboardDateRange");
     if (!rawValue) {
       return null;
     }

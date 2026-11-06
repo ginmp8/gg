@@ -4,11 +4,11 @@ import { Monitor, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 
 type ThemePreference = "light" | "dark" | "system";
-const KEY = "gita.theme";
+const KEY = "gg.theme";
 
 function readPreference(): ThemePreference {
   try {
-    const stored = window.localStorage.getItem(KEY);
+    const stored = window.localStorage.getItem(KEY) ?? window.localStorage.getItem("gita.theme");
     return stored === "light" || stored === "dark" ? stored : "system";
   } catch {
     return "system";
@@ -34,7 +34,7 @@ export function ThemeToggle() {
   function toggle() {
     const next: ThemePreference = mode === "system" ? "light" : mode === "light" ? "dark" : "system";
     try {
-      if (next === "system") window.localStorage.removeItem(KEY);
+      if (next === "system") { window.localStorage.removeItem(KEY); window.localStorage.removeItem("gita.theme"); }
       else window.localStorage.setItem(KEY, next);
     } catch {
       // A storage-disabled browser can still change the theme for this session.

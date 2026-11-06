@@ -1,6 +1,6 @@
 # Effective contribution and technical productivity evidence
 
-**ICE-Git/1** and **Gita-Throughput/1** are experimental, cohort-relative
+**ICE-Git/1** and **GG-Throughput/1** are experimental, cohort-relative
 0–100 scores in the Annual contribution view. They read the existing local
 SQLite snapshot of per-SHA and per-file Git changes, without re-running Git
 diffs, adding a database schema or contacting the network.
@@ -28,7 +28,7 @@ material commits. S scales the percentage of material commits also modifying
 test or docs paths, reaching 100 at 25%. Synthetic splitting or superficial
 test edits can still distort the result.
 
-## Gita-Throughput/1 — productivity proxy
+## GG-Throughput/1 — productivity proxy
 
 A **technical output-rate proxy**, not a human productivity measurement:
 

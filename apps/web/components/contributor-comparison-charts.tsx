@@ -1,6 +1,6 @@
 "use client";
 
-import type { ContributorFileTypeRow, ContributorLeaderboardRow } from "@gita/core";
+import type { ContributorFileTypeRow, ContributorLeaderboardRow } from "@gg/core";
 import * as echarts from "echarts";
 import { useEffect, useMemo, useRef } from "react";
 

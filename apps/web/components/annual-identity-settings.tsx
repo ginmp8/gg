@@ -1,6 +1,6 @@
 "use client";
 
-import type { AnnualIdentityLink } from "@gita/core";
+import type { AnnualIdentityLink } from "@gg/core";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";

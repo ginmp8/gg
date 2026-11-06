@@ -10,7 +10,7 @@ import {
   repositoryInputSchema,
   repositoryPatchSchema,
   type ProviderState
-} from "@gita/core";
+} from "@gg/core";
 import {
   createBranchView,
   createProject,
@@ -56,10 +56,10 @@ import {
   listProjectTags,
   setProjectTagAssignment,
   updateProjectTag,
-  type GitaDatabase
-} from "@gita/db";
-import { compareLocalBranches, isGitHubMetadataAllowed, resolveRepositoryInput } from "@gita/git-engine";
-import { createGitHubAdapter } from "@gita/github-adapter";
+  type GGDatabase
+} from "@gg/db";
+import { compareLocalBranches, isGitHubMetadataAllowed, resolveRepositoryInput } from "@gg/git-engine";
+import { createGitHubAdapter } from "@gg/github-adapter";
 
 import { enqueueProjectRefresh, enqueueRepositoryRefresh } from "./refresh";
 import { enqueueAnnualProjectIndex, syncAnnualGitHubCollaboration } from "./annual";
@@ -72,7 +72,7 @@ const idParamsSchema = z.object({
   branchViewId: z.string().min(1).optional()
 });
 
-export function registerRoutes(server: FastifyInstance, database: GitaDatabase): void {
+export function registerRoutes(server: FastifyInstance, database: GGDatabase): void {
   server.get("/api/health", async () => ({
     ok: true,
     databasePath: database.paths.databasePath,
@@ -137,7 +137,7 @@ export function registerRoutes(server: FastifyInstance, database: GitaDatabase):
     if (!isGitHubMetadataAllowed()) {
       return reply.status(403).send({
         error: "network_disabled",
-        message: "GitHub metadata is disabled by GITA_OFFLINE=1 or GITA_ALLOW_GITHUB_METADATA=0."
+        message: "GitHub metadata is disabled by GG_OFFLINE=1 or GG_ALLOW_GITHUB_METADATA=0."
       });
     }
     try {
@@ -232,7 +232,7 @@ export function registerRoutes(server: FastifyInstance, database: GitaDatabase):
     if (!isGitHubMetadataAllowed()) {
       return reply.status(403).send({
         error: "network_disabled",
-        message: "GitHub metadata is disabled by GITA_OFFLINE=1 or GITA_ALLOW_GITHUB_METADATA=0."
+        message: "GitHub metadata is disabled by GG_OFFLINE=1 or GG_ALLOW_GITHUB_METADATA=0."
       });
     }
     const body = z.object({ repositoryId: z.string().uuid().optional() }).parse(request.body ?? {});

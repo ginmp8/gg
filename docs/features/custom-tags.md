@@ -1,4 +1,4 @@
-# Custom tags (Gita 0.2.0)
+# Custom tags (GG Analytics 0.2.0)
 
 Every tag name and optional group is created by the user; no predefined
 roles, teams or other categories are seeded.

@@ -1,9 +1,9 @@
-# Contributor comparison (Gita 0.2.0)
+# Contributor comparison (GG Analytics 0.2.0)
 
 **Compare** is immediately to the right of **Contributors** in the menu.
 Choose a project/repository and analysis year, then search for contributors.
 The selection is saved per project, repository and year, so changing tabs or
-restarting Gita restores the previous list. The tag and search filters are
+restarting GG restores the previous list. The tag and search filters are
 restored with the selected year.
 
 Use **Select all matching** to include everyone visible after applying the
@@ -19,7 +19,7 @@ IceContributorScore, grouped into collapsible sections instead of one
 unmanageable table:
 
 - **Scores:** effective contribution (ICE-Git/1), productivity proxy
-  (Gita-Throughput/1), optional combined GitHub score, evidence coverage,
+  (GG-Throughput/1), optional combined GitHub score, evidence coverage,
   and the seven score components (integrated delivery, technical diff,
   test/docs, GitHub collaboration, delivery/month, diff/month, continuity).
 - **Activity:** integrated/material/substantive/cosmetic/supported commits,

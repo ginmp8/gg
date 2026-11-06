@@ -10,8 +10,8 @@ opening it does not contact GitHub. Click **Discover accessible repositories
 (network)** to run the authenticated GitHub CLI. This operation requires:
 
 - `gh auth login` and compatible GitHub permissions
-- `GITA_ALLOW_GITHUB_METADATA=1`
-- No global `GITA_OFFLINE=1` block
+- `GG_ALLOW_GITHUB_METADATA=1`
+- No global `GG_OFFLINE=1` block
 
 The endpoint fetches public/private/organization/collaborator repository
 metadata through the paginated GitHub `user/repos` API. Only HTTPS GitHub
@@ -20,11 +20,11 @@ clone URLs pass validation, with no embedded credentials.
 Filter the returned list by owner, visibility, archived status or text;
 select no more than 25 entries per import. **Register selected** writes
 repository records locally but does not clone or fetch. Use the project
-Refresh button to fetch mirrors. This preserves Gita's explicit network
+Refresh button to fetch mirrors. This preserves GG's explicit network
 authorization semantics. Private HTTPS clones may require `gh auth
 setup-git` or another configured Git credential helper.
 
-No access tokens are read or stored by the Gita repository picker.
+No access tokens are read or stored by the GG repository picker.
 
 ## Compare branches (local only)
 
@@ -52,7 +52,7 @@ branch names and option-like inputs. Comparison requests do not contact GitHub.
 - The picker does not implement a credential helper or store tokens; configured
   Git authentication is external.
 - Cross-provider repository discovery is not provided by this GitHub picker.
-- The Gita desktop sidecar retains its authenticated loopback boundary.
+- The GG desktop sidecar retains its authenticated loopback boundary.
 
 Static source and unit-test gates cover protocol safety, comparison results,
 metadata parsing and the 25-entry batch cap. Private GitHub credentials and

@@ -1,8 +1,8 @@
 /** Build ICE-Git evidence from existing SQLite diffs; never re-run Git or contact a provider. */
-import type { AnnualReport, IceFileEvidence, IceSignal, IceScoreReport } from "@gita/core";
-import { ICE_GIT_POLICY, scoreIceCohort } from "@gita/core";
+import type { AnnualReport, IceFileEvidence, IceSignal, IceScoreReport } from "@gg/core";
+import { ICE_GIT_POLICY, scoreIceCohort } from "@gg/core";
 
-import type { GitaDatabase } from "./client";
+import type { GGDatabase } from "./client";
 
 type ReportBase = Omit<AnnualReport, "evidenceScores">;
 type FileRow = {
@@ -34,7 +34,7 @@ function rememberFile(target: IceFileEvidence[], evidence: IceFileEvidence): voi
   );
 }
 
-export function getAnnualEvidence(database: GitaDatabase, report: ReportBase): IceScoreReport {
+export function getAnnualEvidence(database: GGDatabase, report: ReportBase): IceScoreReport {
   if (!report.complete) return scoreIceCohort([], false, "incomplete_history");
 
   const identities = database.sqlite.prepare(

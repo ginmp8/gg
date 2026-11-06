@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const apiEntry = path.join(root, "apps/desktop/src-tauri/api-dist/server.mjs");
 const token = "a".repeat(64);
-const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "gita-sidecar-smoke-"));
+const tmp = await fs.mkdtemp(path.join(os.tmpdir(), "gg-sidecar-smoke-"));
 
 async function reservePort() {
   const server = net.createServer();
@@ -26,10 +26,10 @@ const port = await reservePort();
 const child = spawn(process.execPath, [apiEntry], {
   env: {
     ...process.env,
-    GITA_API_PORT: String(port),
-    GITA_ROOT: root,
-    GITA_DATA_DIR: tmp,
-    GITA_DESKTOP_TOKEN: token
+    GG_API_PORT: String(port),
+    GG_ROOT: root,
+    GG_DATA_DIR: tmp,
+    GG_DESKTOP_TOKEN: token
   },
   stdio: ["ignore", "pipe", "pipe"]
 });
