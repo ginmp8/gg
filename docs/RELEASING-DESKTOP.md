@@ -53,9 +53,10 @@ first native Cargo build will generate it. Review and commit that lockfile
 before a production-grade release to freeze transitive dependencies.
 
 The production dependency audit was remediated on the feature branch;
-see [Security hardening](SECURITY-HARDENING.md). The development-inclusive
-inventory still contains outstanding advisories, which need separate
-triage before public distribution.
+see [Security hardening](SECURITY-HARDENING.md). The development-inclusive dependency inventory was remediated for the 0.3.0
+proposal. The full audit on [run 42263753544](https://github.com/ginmp8/gg/actions/runs/42263753544)
+reported zero known advisories. Re-run the full and production-only audits
+on the release commit; the result is point-in-time evidence only.
 
 GitHub enables manual workflow dispatch only after the workflow file
 is available on the repository default branch. Tag push builds are
