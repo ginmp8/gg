@@ -24,4 +24,4 @@ Documentation is written in English. Version 0.2.0 is a development candidate, n
 - [Network and privacy](NETWORK-PRIVACY.md), [security hardening](SECURITY-HARDENING.md)
 - [Desktop](DESKTOP.md), [build and release](RELEASING-DESKTOP.md) and [desktop release notes](DESKTOP-RELEASE.md)
 
-- [Brand identity and compatibility](BRANDING.md)
+- [Brand identity, production screenshots, and compatibility](BRANDING.md) — reproducible capture without Next.js development indicators
