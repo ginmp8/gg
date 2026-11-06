@@ -20,7 +20,7 @@ concurrency:
 jobs:
   capture:
     # Generated-only commits do not match the paths filter. Never push from pull requests.
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
       GG_OFFLINE: "1"
